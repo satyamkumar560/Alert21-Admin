@@ -227,10 +227,53 @@ export class DataService {
       if (response && response.success) {
         this.fetchLiveSmsProviders();
         this.fetchLiveDashboardStats();
+        this.toastService.showSuccess('Provider Created', `SMS Gateway ${body.name} configured successfully.`);
         return true;
       }
     } catch (e) {
       console.warn('POST SMS Provider API fallback.', e);
+      this.toastService.showError('Creation Failed', 'Could not create SMS Provider via API.');
+    }
+    return false;
+  }
+
+  /**
+   * PATCH Live SMS Provider: https://app.moteligo.in/alert/api/admin/sms-providers/{id}
+   */
+  async updateLiveSmsProvider(providerData: any, adminName: string = 'Admin'): Promise<boolean> {
+    try {
+      const token = this.authService.authToken();
+      const headers = new HttpHeaders({
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      });
+
+      const body: any = {
+        name: providerData.name,
+        base_url: providerData.baseUrl,
+        username: providerData.username,
+        telemarketer_id: providerData.rawTelemarketerId,
+        unicode_default: providerData.unicodeDefault,
+        status: providerData.status,
+        is_default: providerData.isGlobalDefault
+      };
+      
+      if (providerData.password && providerData.password.trim() !== '') {
+        body.password = providerData.password;
+      }
+
+      const response = await firstValueFrom(
+        this.http.patch<any>(`https://app.moteligo.in/alert/api/admin/sms-providers/${providerData.id}`, body, { headers })
+      );
+
+      if (response && response.success) {
+        this.fetchLiveSmsProviders();
+        this.toastService.showSuccess('Provider Updated', `SMS Gateway ${body.name} updated successfully.`);
+        return true;
+      }
+    } catch (e) {
+      console.warn('PATCH SMS Provider API fallback.', e);
+      this.toastService.showError('Update Failed', 'Could not update SMS Provider via API.');
     }
     return false;
   }

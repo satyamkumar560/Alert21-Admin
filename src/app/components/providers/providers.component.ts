@@ -19,7 +19,7 @@ import { IconComponent } from '../shared/icon.component';
           <p class="text-xs text-slate-500 font-medium">Configure MSG24 gateway, credentials, Telemarketer ID, and parameter mapping adapter.</p>
         </div>
 
-        <button (click)="openAddModal()" class="btn btn-primary shadow-md">
+        <button *ngIf="dataService.smsProviders().length === 0" (click)="openAddModal()" class="btn btn-primary shadow-md">
           <app-icon name="server" [size]="16"></app-icon>
           <span>Add Custom SMS Gateway</span>
         </button>
@@ -93,13 +93,13 @@ import { IconComponent } from '../shared/icon.component';
         </div>
       </div>
 
-      <!-- Add Provider Modal -->
+      <!-- Add/Edit Provider Modal -->
       <div *ngIf="showAddModal" class="modal-backdrop" (click)="closeAddModal()">
         <div class="modal-card p-6 border border-slate-200 max-w-lg bg-white rounded-2xl shadow-2xl" (click)="$event.stopPropagation()">
           <div class="pb-4 border-b border-slate-100 flex items-center justify-between">
             <div>
-              <h3 class="text-lg font-extrabold text-slate-900">Add New SMS Gateway Provider</h3>
-              <p class="text-xs text-slate-500">Configure new SMS gateway credentials.</p>
+              <h3 class="text-lg font-extrabold text-slate-900">{{ isEditMode ? 'Edit SMS Gateway Provider' : 'Add New SMS Gateway Provider' }}</h3>
+              <p class="text-xs text-slate-500">{{ isEditMode ? 'Update SMS gateway credentials.' : 'Configure new SMS gateway credentials.' }}</p>
             </div>
             <button (click)="closeAddModal()" class="btn btn-outline btn-sm">Close</button>
           </div>
@@ -112,7 +112,7 @@ import { IconComponent } from '../shared/icon.component';
 
             <div class="form-group">
               <label class="form-label">Provider Unique Code:</label>
-              <input type="text" [(ngModel)]="newProvider.code" placeholder="e.g. MSG24" class="form-control text-xs font-mono">
+              <input type="text" [(ngModel)]="newProvider.code" placeholder="e.g. MSG24" class="form-control text-xs font-mono" [disabled]="isEditMode">
             </div>
 
             <div class="form-group">
@@ -128,7 +128,7 @@ import { IconComponent } from '../shared/icon.component';
 
               <div class="form-group">
                 <label class="form-label">API Password:</label>
-                <input type="password" [(ngModel)]="newProvider.password" placeholder="Satyam@123" class="form-control text-xs font-mono">
+                <input type="password" [(ngModel)]="newProvider.password" placeholder="Leave blank to keep existing" class="form-control text-xs font-mono">
               </div>
             </div>
 
@@ -141,7 +141,7 @@ import { IconComponent } from '../shared/icon.component';
           <div class="pt-4 border-t border-slate-100 flex justify-end gap-3">
             <button (click)="closeAddModal()" class="btn btn-outline btn-sm">Cancel</button>
             <button [disabled]="isSubmitting" (click)="saveNewProvider()" class="btn btn-primary btn-sm">
-              {{ isSubmitting ? 'Saving Configuration...' : 'Create SMS Provider' }}
+              {{ isSubmitting ? 'Saving Configuration...' : (isEditMode ? 'Update SMS Provider' : 'Create SMS Provider') }}
             </button>
           </div>
         </div>
@@ -155,20 +155,27 @@ export class ProvidersComponent {
 
   showAddModal = false;
   isSubmitting = false;
+  isEditMode = false;
 
-  newProvider: any = {
-    name: 'MSG24',
-    code: 'MSG24',
-    baseUrl: 'https://admin.msg24x7.co.in/fe/api/v1/send',
-    username: 'satyam12',
-    password: 'Satyam@123',
-    rawTelemarketerId: '1302167049537543382',
-    unicodeDefault: false,
-    status: 'ACTIVE',
-    isGlobalDefault: true
-  };
+  newProvider: any = {};
+
+  get defaultProvider() {
+    return {
+      name: 'MSG24',
+      code: 'MSG24',
+      baseUrl: 'https://admin.msg24x7.co.in/fe/api/v1/send',
+      username: 'satyam12',
+      password: '',
+      rawTelemarketerId: '1302167049537543382',
+      unicodeDefault: false,
+      status: 'ACTIVE',
+      isGlobalDefault: true
+    };
+  }
 
   openAddModal() {
+    this.isEditMode = false;
+    this.newProvider = this.defaultProvider;
     this.showAddModal = true;
   }
 
@@ -180,12 +187,20 @@ export class ProvidersComponent {
   async saveNewProvider() {
     this.isSubmitting = true;
     const adminName = this.authService.currentAdmin()?.name || 'Admin';
-    await this.dataService.createLiveSmsProvider(this.newProvider, adminName);
+    
+    if (this.isEditMode) {
+      await this.dataService.updateLiveSmsProvider(this.newProvider, adminName);
+    } else {
+      await this.dataService.createLiveSmsProvider(this.newProvider, adminName);
+    }
+    
     this.closeAddModal();
   }
 
   openEditModal(provider: SmsProvider) {
-    alert(`Editing ${provider.name} Configuration`);
+    this.isEditMode = true;
+    this.newProvider = { ...provider, password: '' };
+    this.showAddModal = true;
   }
 
   testConnection(provider: SmsProvider) {
