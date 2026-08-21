@@ -32,7 +32,7 @@ build_angular:
     - npm run build
 
     - echo "Checking build..."
-    - ls -la dist/alert21/browser
+    - ls -la dist/admin-alert21/browser
 
     - echo "Creating build archive..."
     - tar -czf dist.tar.gz dist
@@ -93,7 +93,7 @@ deploy_angular:
       tar -xzf /tmp/dist.tar.gz
 
       echo "Checking Angular build..."
-      ls -la "$APP_DIR/dist/alert21/browser"
+      ls -la "$APP_DIR/dist/admin-alert21/browser"
 
       echo "Checking PM2 process..."
 
@@ -112,7 +112,7 @@ deploy_angular:
           pm2 start serve \
             --name "$PM2_APP_NAME" \
             -- \
-            -s "$APP_DIR/dist/alert21/browser" \
+            -s "$APP_DIR/dist/admin-alert21/browser" \
             -l "$APP_PORT"
 
       fi
