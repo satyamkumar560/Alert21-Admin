@@ -1,0 +1,136 @@
+stages:
+  - build
+  - deploy
+
+variables:
+  SSH_USER: "girjeshwhats"
+  SERVER_IP: "66.116.244.42"
+  SSH_PORT: "22"
+
+  APP_DIR: "/home/girjeshwhats/scriza/alert21/admin"
+  PM2_APP_NAME: "alert21-admin"
+  APP_PORT: "5099"
+
+
+# =========================
+# BUILD
+# =========================
+
+build_angular:
+  stage: build
+  image: node:20
+
+  cache:
+    paths:
+      - node_modules/
+
+  script:
+    - echo "Installing dependencies..."
+    - npm ci
+
+    - echo "Building Angular application..."
+    - npm run build
+
+    - echo "Checking build..."
+    - ls -la dist/alert21/browser
+
+    - echo "Creating build archive..."
+    - tar -czf dist.tar.gz dist
+
+  artifacts:
+    paths:
+      - dist.tar.gz
+    expire_in: 1 hour
+
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+
+# =========================
+# DEPLOY
+# =========================
+
+deploy_angular:
+  stage: deploy
+  image: alpine:latest
+
+  dependencies:
+    - build_angular
+
+  before_script:
+    - apk add --no-cache openssh-client
+    - mkdir -p ~/.ssh
+
+    - echo "$SSH_PRIVATE_KEY" | base64 -d > ~/.ssh/id_rsa
+    - chmod 600 ~/.ssh/id_rsa
+
+    - ssh-keyscan -H -p "$SSH_PORT" "$SERVER_IP" >> ~/.ssh/known_hosts
+
+  script:
+
+    # Upload build
+    - echo "Uploading Angular build..."
+    - scp -P "$SSH_PORT" dist.tar.gz "$SSH_USER@$SERVER_IP:/tmp/"
+
+    # Deploy and restart PM2
+    - |
+      ssh -p "$SSH_PORT" "$SSH_USER@$SERVER_IP" <<EOF
+
+      set -e
+
+      echo "================================="
+      echo "Deploying Angular application"
+      echo "================================="
+
+      mkdir -p "$APP_DIR"
+
+      cd "$APP_DIR"
+
+      echo "Removing old build..."
+      rm -rf dist
+
+      echo "Extracting new build..."
+      tar -xzf /tmp/dist.tar.gz
+
+      echo "Checking Angular build..."
+      ls -la "$APP_DIR/dist/alert21/browser"
+
+      echo "Checking PM2 process..."
+
+      if pm2 describe "$PM2_APP_NAME" > /dev/null 2>&1; then
+
+          echo "PM2 process found."
+          echo "Restarting application..."
+
+          pm2 restart "$PM2_APP_NAME"
+
+      else
+
+          echo "PM2 process not found."
+          echo "Starting application..."
+
+          pm2 start serve \
+            --name "$PM2_APP_NAME" \
+            -- \
+            -s "$APP_DIR/dist/alert21/browser" \
+            -l "$APP_PORT"
+
+      fi
+
+      echo "Saving PM2 configuration..."
+      pm2 save
+
+      echo "PM2 Status:"
+      pm2 status
+
+      echo "Testing application..."
+      curl -I "http://localhost:$APP_PORT" || true
+
+      echo "================================="
+      echo "Deployment completed"
+      echo "================================="
+
+      EOF
+
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
