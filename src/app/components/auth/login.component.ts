@@ -15,8 +15,8 @@ import { IconComponent } from '../shared/icon.component';
         
         <!-- Top Badge -->
         <div class="relative z-10">
-          <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/15 backdrop-blur-md border border-white/20 text-white text-xs font-bold tracking-wide">
-            <span>⚡ Alert21</span>
+          <div class="inline-flex items-center px-4 py-2 rounded-2xl bg-white shadow-lg">
+            <img src="/logo.png" alt="Alert21" class="h-7 w-auto object-contain">
           </div>
         </div>
 

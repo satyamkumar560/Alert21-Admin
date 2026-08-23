@@ -225,32 +225,10 @@ export type NavTab =
       [ngClass]="isSidebarOpen ? 'translate-x-0' : '-translate-x-full'">
 
       <!-- Top Branding Logo -->
-      <div class="h-[76px] px-6 flex items-center gap-3.5 border-b border-slate-800/80">
-
-        <div
-          class="w-10 h-10 rounded-2xl bg-[#5d55fa] flex items-center justify-center shadow-lg shadow-indigo-600/30">
-
-          <svg
-            width="22"
-            height="22"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="white"
-            stroke-width="2.5"
-            stroke-linecap="round"
-            stroke-linejoin="round">
-
-            <polygon
-              points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"
-              fill="white">
-            </polygon>
-
-          </svg>
+      <div class="h-[76px] px-5 flex items-center justify-center border-b border-slate-800/80">
+        <div class="w-full bg-white px-3.5 py-2 rounded-xl flex items-center justify-center shadow-sm">
+          <img src="/logo.png" alt="Alert21" class="h-8 max-h-[34px] w-auto object-contain">
         </div>
-
-        <span class="font-extrabold text-2xl text-white tracking-tight">
-          Alert21
-        </span>
       </div>
 
       <!-- Navigation Links -->
