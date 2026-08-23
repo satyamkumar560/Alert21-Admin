@@ -48,7 +48,7 @@ export class DataService {
   }
 
   /**
-   * GET Live Dashboard Stats from https://app.moteligo.in/alert/api/admin/dashboard
+   * GET Live Dashboard Stats from https://app.alert21.in/back/api/admin/dashboard
    */
   async fetchLiveDashboardStats() {
     try {
@@ -162,7 +162,7 @@ export class DataService {
   });
 
   /**
-   * GET Live SMS Providers from https://app.moteligo.in/alert/api/admin/sms-providers
+   * GET Live SMS Providers from https://app.alert21.in/back/api/admin/sms-providers
    */
   async fetchLiveSmsProviders() {
     try {
@@ -172,7 +172,7 @@ export class DataService {
       });
 
       const response = await firstValueFrom(
-        this.http.get<any>('https://app.moteligo.in/alert/api/admin/sms-providers', { headers })
+        this.http.get<any>('https://app.alert21.in/back/api/admin/sms-providers', { headers })
       );
 
       if (response && response.success && Array.isArray(response.data)) {
@@ -198,7 +198,7 @@ export class DataService {
   }
 
   /**
-   * POST Live SMS Provider: https://app.moteligo.in/alert/api/admin/sms-providers
+   * POST Live SMS Provider: https://app.alert21.in/back/api/admin/sms-providers
    */
   async createLiveSmsProvider(providerData: any, adminName: string = 'Admin'): Promise<boolean> {
     try {
@@ -221,7 +221,7 @@ export class DataService {
       };
 
       const response = await firstValueFrom(
-        this.http.post<any>('https://app.moteligo.in/alert/api/admin/sms-providers', body, { headers })
+        this.http.post<any>('https://app.alert21.in/back/api/admin/sms-providers', body, { headers })
       );
 
       if (response && response.success) {
@@ -238,7 +238,7 @@ export class DataService {
   }
 
   /**
-   * PATCH Live SMS Provider: https://app.moteligo.in/alert/api/admin/sms-providers/{id}
+   * PATCH Live SMS Provider: https://app.alert21.in/back/api/admin/sms-providers/{id}
    */
   async updateLiveSmsProvider(providerData: any, adminName: string = 'Admin'): Promise<boolean> {
     try {
@@ -263,7 +263,7 @@ export class DataService {
       }
 
       const response = await firstValueFrom(
-        this.http.patch<any>(`https://app.moteligo.in/alert/api/admin/sms-providers/${providerData.id}`, body, { headers })
+        this.http.patch<any>(`https://app.alert21.in/back/api/admin/sms-providers/${providerData.id}`, body, { headers })
       );
 
       if (response && response.success) {
@@ -279,7 +279,7 @@ export class DataService {
   }
 
   /**
-   * GET Live Sender IDs from https://app.moteligo.in/alert/api/admin/dlt/sender-ids
+   * GET Live Sender IDs from https://app.alert21.in/back/api/admin/dlt/sender-ids
    */
   async fetchLiveSenderIds() {
     try {
@@ -289,7 +289,7 @@ export class DataService {
       });
 
       const response = await firstValueFrom(
-        this.http.get<any>('https://app.moteligo.in/alert/api/admin/dlt/sender-ids', { headers })
+        this.http.get<any>('https://app.alert21.in/back/api/admin/dlt/sender-ids', { headers })
       );
 
       if (response && response.success && Array.isArray(response.data)) {
@@ -312,7 +312,7 @@ export class DataService {
   }
 
   /**
-   * PATCH Live Sender ID Status: https://app.moteligo.in/alert/api/admin/dlt/sender-ids/{id}/status
+   * PATCH Live Sender ID Status: https://app.alert21.in/back/api/admin/dlt/sender-ids/{id}/status
    */
   async updateLiveSenderStatus(senderId: string, status: DltStatus, remarks?: string, adminName: string = 'Admin'): Promise<boolean> {
     try {
@@ -322,7 +322,7 @@ export class DataService {
         'Content-Type': 'application/json'
       });
 
-      const url = `https://app.moteligo.in/alert/api/admin/dlt/sender-ids/${senderId}/status`;
+      const url = `https://app.alert21.in/back/api/admin/dlt/sender-ids/${senderId}/status`;
       const response = await firstValueFrom(
         this.http.patch<any>(url, { status }, { headers })
       );
@@ -348,7 +348,7 @@ export class DataService {
   }
 
   /**
-   * GET Live DLT Templates from https://app.moteligo.in/alert/api/admin/dlt/templates
+   * GET Live DLT Templates from https://app.alert21.in/back/api/admin/dlt/templates
    */
   async fetchLiveTemplates() {
     try {
@@ -358,7 +358,7 @@ export class DataService {
       });
 
       const response = await firstValueFrom(
-        this.http.get<any>('https://app.moteligo.in/alert/api/admin/dlt/templates', { headers })
+        this.http.get<any>('https://app.alert21.in/back/api/admin/dlt/templates', { headers })
       );
 
       if (response && response.success && Array.isArray(response.data)) {
@@ -384,7 +384,7 @@ export class DataService {
   }
 
   /**
-   * PATCH Live DLT Template Status: https://app.moteligo.in/alert/api/admin/dlt/templates/{id}/status
+   * PATCH Live DLT Template Status: https://app.alert21.in/back/api/admin/dlt/templates/{id}/status
    */
   async updateLiveTemplateStatus(templateId: string, status: DltStatus, remarks?: string, adminName: string = 'Admin'): Promise<boolean> {
     try {
@@ -394,7 +394,7 @@ export class DataService {
         'Content-Type': 'application/json'
       });
 
-      const url = `https://app.moteligo.in/alert/api/admin/dlt/templates/${templateId}/status`;
+      const url = `https://app.alert21.in/back/api/admin/dlt/templates/${templateId}/status`;
       const response = await firstValueFrom(
         this.http.patch<any>(url, { status }, { headers })
       );
@@ -427,7 +427,7 @@ export class DataService {
         'Content-Type': 'application/json'
       });
 
-      const url = `https://app.moteligo.in/alert/api/admin/dlt/principal-entities/${peId}/status`;
+      const url = `https://app.alert21.in/back/api/admin/dlt/principal-entities/${peId}/status`;
       const response = await firstValueFrom(
         this.http.patch<any>(url, { status }, { headers })
       );
@@ -460,7 +460,7 @@ export class DataService {
       });
 
       const response = await firstValueFrom(
-        this.http.get<any>('https://app.moteligo.in/alert/api/admin/dlt/principal-entities', { headers })
+        this.http.get<any>('https://app.alert21.in/back/api/admin/dlt/principal-entities', { headers })
       );
 
       if (response && response.success && Array.isArray(response.data)) {
@@ -494,7 +494,7 @@ export class DataService {
       });
 
       const response = await firstValueFrom(
-        this.http.get<any>('https://app.moteligo.in/alert/api/admin/users', { headers })
+        this.http.get<any>('https://app.alert21.in/back/api/admin/users', { headers })
       );
 
       if (response && response.success && response.data && Array.isArray(response.data.items)) {
@@ -531,7 +531,7 @@ export class DataService {
         'Content-Type': 'application/json'
       });
 
-      const url = `https://app.moteligo.in/alert/api/admin/users/${userId}/status`;
+      const url = `https://app.alert21.in/back/api/admin/users/${userId}/status`;
       const response = await firstValueFrom(
         this.http.patch<any>(url, { status }, { headers })
       );
@@ -582,7 +582,7 @@ export class DataService {
   }
 
   /**
-   * GET Live User SMS Provider from https://app.moteligo.in/alert/api/admin/users/{userId}/sms-provider
+   * GET Live User SMS Provider from https://app.alert21.in/back/api/admin/users/{userId}/sms-provider
    */
   async fetchUserSmsProvider(userId: string): Promise<{ provider: any; source: string } | null> {
     try {
@@ -591,7 +591,7 @@ export class DataService {
         'Authorization': `Bearer ${token}`
       });
 
-      const url = `https://app.moteligo.in/alert/api/admin/users/${userId}/sms-provider`;
+      const url = `https://app.alert21.in/back/api/admin/users/${userId}/sms-provider`;
       const response = await firstValueFrom(
         this.http.get<any>(url, { headers })
       );
@@ -606,7 +606,7 @@ export class DataService {
   }
 
   /**
-   * POST Live DLT Telemarketer Hash from https://app.moteligo.in/alert/api/admin/tools/dlt-telemarketer-hash
+   * POST Live DLT Telemarketer Hash from https://app.alert21.in/back/api/admin/tools/dlt-telemarketer-hash
    */
   async generateLiveDltHash(principalEntityId: string, telemarketerId: string): Promise<any | null> {
     try {
@@ -622,7 +622,7 @@ export class DataService {
       };
 
       const response = await firstValueFrom(
-        this.http.post<any>('https://app.moteligo.in/alert/api/admin/tools/dlt-telemarketer-hash', body, { headers })
+        this.http.post<any>('https://app.alert21.in/back/api/admin/tools/dlt-telemarketer-hash', body, { headers })
       );
 
       if (response && (response.success || response.hash || response.data)) {
@@ -635,7 +635,7 @@ export class DataService {
   }
 
   /**
-   * GET Live SMS Logs from https://app.moteligo.in/alert/api/admin/sms-logs
+   * GET Live SMS Logs from https://app.alert21.in/back/api/admin/sms-logs
    */
   async fetchLiveSmsLogs() {
     try {
@@ -645,7 +645,7 @@ export class DataService {
       });
 
       const response = await firstValueFrom(
-        this.http.get<any>('https://app.moteligo.in/alert/api/admin/sms-logs', { headers })
+        this.http.get<any>('https://app.alert21.in/back/api/admin/sms-logs', { headers })
       );
 
       if (response && response.success && Array.isArray(response.data)) {
@@ -677,7 +677,7 @@ export class DataService {
   }
 
   /**
-   * GET Live Audit Logs from https://app.moteligo.in/alert/api/admin/audit-logs
+   * GET Live Audit Logs from https://app.alert21.in/back/api/admin/audit-logs
    */
   async fetchLiveAuditLogs() {
     try {
@@ -687,7 +687,7 @@ export class DataService {
       });
 
       const response = await firstValueFrom(
-        this.http.get<any>('https://app.moteligo.in/alert/api/admin/audit-logs', { headers })
+        this.http.get<any>('https://app.alert21.in/back/api/admin/audit-logs', { headers })
       );
 
       if (response && response.success && response.data && Array.isArray(response.data.items)) {

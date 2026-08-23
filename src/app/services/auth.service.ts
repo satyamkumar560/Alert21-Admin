@@ -21,7 +21,7 @@ export class AuthService {
   isLoggedIn = computed(() => this.currentAdmin() !== null && this.authToken() !== null);
 
   /**
-   * Integrates live API: POST https://app.moteligo.in/alert/api/admin/auth/login
+   * Integrates live API: POST https://app.alert21.in/back/api/admin/auth/login
    */
   async loginWithApi(email: string, pass: string): Promise<{ success: boolean; message?: string }> {
     try {
@@ -76,7 +76,7 @@ export class AuthService {
           'Content-Type': 'application/json'
         });
         await firstValueFrom(
-          this.http.post<any>('https://app.moteligo.in/alert/api/admin/auth/logout', {}, { headers })
+          this.http.post<any>('https://app.alert21.in/back/api/admin/auth/logout', {}, { headers })
         );
       } catch (e) {
         console.warn('Logout API failed or token already invalid.', e);
