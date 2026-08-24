@@ -225,9 +225,9 @@ export type NavTab =
       [ngClass]="isSidebarOpen ? 'translate-x-0' : '-translate-x-full'">
 
       <!-- Top Branding Logo -->
-      <div class="h-[76px] px-5 flex items-center justify-center border-b border-slate-800/80">
-        <div class="w-full bg-white px-3.5 py-2 rounded-xl flex items-center justify-center shadow-sm">
-          <img src="/logo.png" alt="Alert21" class="h-8 max-h-[34px] w-auto object-contain">
+      <div class="h-[76px] p-1.5 flex items-center justify-center border-b border-slate-800/80">
+        <div class="w-full h-full bg-white px-3 py-1 rounded-xl flex items-center justify-center shadow-sm">
+          <img src="/logo.png" alt="Alert21" class="h-11 max-h-[52px] w-auto max-w-full object-contain">
         </div>
       </div>
 

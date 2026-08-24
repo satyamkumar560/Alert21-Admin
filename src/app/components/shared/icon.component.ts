@@ -118,6 +118,9 @@ import { CommonModule } from '@angular/common';
       </ng-container>
 
       <!-- Check / Check Circle -->
+      <ng-container *ngIf="name === 'check'">
+        <polyline points="20 6 9 17 4 12"/>
+      </ng-container>
       <ng-container *ngIf="name === 'check-circle'">
         <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
         <path d="m9 11 3 3L22 4"/>

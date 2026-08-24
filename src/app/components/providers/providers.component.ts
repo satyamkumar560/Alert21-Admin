@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DataService } from '../../services/data.service';
 import { AuthService } from '../../services/auth.service';
+import { ToastService } from '../../services/toast.service';
 import { SmsProvider } from '../../models/alert21.models';
 import { IconComponent } from '../shared/icon.component';
 
@@ -50,24 +51,42 @@ import { IconComponent } from '../shared/icon.component';
           </div>
 
           <!-- Configuration Parameter Spec -->
-          <div class="bg-slate-900 text-slate-200 p-4 rounded-xl font-mono text-xs space-y-2">
-            <div class="flex justify-between">
+          <div class="bg-slate-900 text-slate-200 p-4 rounded-xl font-mono text-xs space-y-2.5">
+            <div class="flex justify-between items-center">
               <span class="text-slate-400">Base API URL:</span>
-              <span class="text-indigo-400 truncate max-w-xs">{{ provider.baseUrl }}</span>
+              <span class="text-indigo-400 truncate max-w-xs" [title]="provider.baseUrl">{{ provider.baseUrl }}</span>
             </div>
-            <div class="flex justify-between">
+
+            <!-- Callback / DLR URL with Copy Button -->
+            <div *ngIf="provider.callbackUrl" class="bg-slate-950/90 p-2.5 rounded-lg border border-slate-800/80 space-y-1.5">
+              <div class="flex items-center justify-between">
+                <span class="text-slate-400 text-[10px] uppercase font-bold tracking-wider">Callback / DLR URL:</span>
+                <button 
+                  type="button" 
+                  (click)="copyCallbackUrl(provider.callbackUrl, provider.id)" 
+                  class="inline-flex items-center gap-1.5 text-[11px] font-sans font-semibold px-2.5 py-1 rounded-md bg-indigo-600/30 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 transition-all cursor-pointer">
+                  <app-icon [name]="copiedId === provider.id ? 'check' : 'copy'" [size]="12"></app-icon>
+                  <span>{{ copiedId === provider.id ? 'Copied' : 'Copy URL' }}</span>
+                </button>
+              </div>
+              <div class="text-cyan-400 font-mono text-[11px] break-all select-all bg-slate-900/60 p-1.5 rounded border border-slate-800/60">
+                {{ provider.callbackUrl }}
+              </div>
+            </div>
+
+            <div class="flex justify-between items-center">
               <span class="text-slate-400">Username:</span>
               <span class="text-emerald-400 font-bold">{{ provider.username }}</span>
             </div>
-            <div class="flex justify-between">
+            <div class="flex justify-between items-center">
               <span class="text-slate-400">Password / Secret:</span>
               <span class="text-amber-400">••••••••••••••••</span>
             </div>
-            <div class="flex justify-between">
+            <div class="flex justify-between items-center">
               <span class="text-slate-400">Raw Telemarketer ID:</span>
               <span class="text-indigo-300 font-bold">{{ provider.rawTelemarketerId }}</span>
             </div>
-            <div class="flex justify-between">
+            <div class="flex justify-between items-center">
               <span class="text-slate-400">Unicode Default:</span>
               <span class="text-slate-300">{{ provider.unicodeDefault ? 'TRUE' : 'FALSE' }}</span>
             </div>
@@ -152,10 +171,12 @@ import { IconComponent } from '../shared/icon.component';
 export class ProvidersComponent {
   dataService = inject(DataService);
   authService = inject(AuthService);
+  toastService = inject(ToastService);
 
   showAddModal = false;
   isSubmitting = false;
   isEditMode = false;
+  copiedId: string | null = null;
 
   newProvider: any = {};
 
@@ -171,6 +192,31 @@ export class ProvidersComponent {
       status: 'ACTIVE',
       isGlobalDefault: true
     };
+  }
+
+  async copyCallbackUrl(url: string, id: string) {
+    if (!url) return;
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        const textArea = document.createElement('textarea');
+        textArea.value = url;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
+      this.copiedId = id;
+      this.toastService.showSuccess('Copied to Clipboard', 'Callback URL copied to clipboard.');
+      setTimeout(() => {
+        if (this.copiedId === id) {
+          this.copiedId = null;
+        }
+      }, 2500);
+    } catch (e) {
+      this.toastService.showError('Copy Failed', 'Failed to copy callback URL.');
+    }
   }
 
   openAddModal() {

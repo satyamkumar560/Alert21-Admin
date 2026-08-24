@@ -85,6 +85,7 @@ export interface SmsProvider {
   name: string;
   code: string;
   baseUrl: string;
+  callbackUrl?: string;
   username: string;
   passwordEncrypted: string;
   rawTelemarketerId: string;

@@ -181,6 +181,7 @@ export class DataService {
           name: item.name || 'MSG24',
           code: item.code || 'MSG24',
           baseUrl: item.base_url || 'https://admin.msg24x7.co.in/fe/api/v1/send',
+          callbackUrl: item.callback_url || '',
           username: item.username || 'satyam12',
           passwordEncrypted: '••••••••••••••••',
           rawTelemarketerId: item.telemarketer_id || item.telemarketer_id_masked || '1302167049537543382',
