@@ -132,8 +132,8 @@ import { IconComponent } from '../shared/icon.component';
 export class LoginComponent {
   authService = inject(AuthService);
 
-  email = 'admin@example.com';
-  password = 'password123';
+  email = 'admin@scriza.in';
+  password = '';
   showPassword = false;
   rememberMe = false;
   isLoading = false;

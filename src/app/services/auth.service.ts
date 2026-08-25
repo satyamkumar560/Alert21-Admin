@@ -1,7 +1,7 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { AdminUser } from '../models/alert21.models';
+import { AdminUser, AdminRole } from '../models/alert21.models';
 import { environment } from '../../environments/environment';
 import { Router } from '@angular/router';
 
@@ -32,22 +32,32 @@ export class AuthService {
         })
       );
 
-      if (response && (response.success || response.token)) {
+      if (response && (response.success || response.token || response.data?.token)) {
         const token = response.token || response.data?.token;
         if (token) {
           this.authToken.set(token);
           localStorage.setItem('adminToken', token);
         }
         
-        const userData = response.user || response.data || {};
+        const userData = response.user || response.data?.user || response.data || {};
+        const userRole = (userData.role || response.role || 'ADMIN').toUpperCase();
+
+        // Validate that the authenticated account has ADMIN role
+        if (userRole !== 'ADMIN' && userRole !== 'SUPER_ADMIN') {
+          return { 
+            success: false, 
+            message: 'Access Denied: You must have an ADMIN role to access the Alert21 Admin Panel.' 
+          };
+        }
+
         const adminUser: AdminUser = {
-          id: userData.id || userData._id || 'ADM-101',
-          name: userData.fullName || userData.name || (email === 'admin@example.com' ? 'Satyam Admin' : 'Admin'),
-          company: userData.company || 'Alert21 Admin Panel',
-          email: userData.email || email,
-          role: userData.role || 'ADMIN',
-          avatar: userData.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120',
-          lastLogin: new Date().toISOString()
+          id: userData.id || userData._id || '',
+          name: userData.fullName || userData.name || userData.username || 'Admin',
+          company: userData.companyName || userData.company || 'Scriza Admin',
+          email: userData.email || email.trim(),
+          role: userRole as AdminRole,
+          avatar: userData.avatar || '',
+          lastLogin: userData.lastLogin || new Date().toISOString()
         };
 
         this.currentAdmin.set(adminUser);

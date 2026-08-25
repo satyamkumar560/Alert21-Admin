@@ -74,6 +74,11 @@ export class DataService {
    */
   stats = computed(() => {
     const live = this.liveApiStats();
+    const allUsers = this.users();
+    const allPE = this.principalEntities();
+    const allSenders = this.senderIds();
+    const allTemplates = this.contentTemplates();
+    const allProviders = this.smsProviders();
 
     if (live) {
       const u = live.users || {};
@@ -85,30 +90,30 @@ export class DataService {
 
       return {
         users: {
-          total: u.total ?? 16,
-          active: u.active ?? 16,
-          suspended: u.suspended ?? 0,
-          blocked: u.blocked ?? 0
+          total: u.total ?? allUsers.length,
+          active: u.active ?? allUsers.filter(user => user.status === 'ACTIVE').length,
+          suspended: u.suspended ?? allUsers.filter(user => user.status === 'SUSPENDED').length,
+          blocked: u.blocked ?? allUsers.filter(user => user.status === 'BLOCKED').length
         },
         principalEntities: {
-          pending: pe.pending ?? 2,
-          active: pe.active ?? 4,
-          total: (pe.active ?? 4) + (pe.pending ?? 2)
+          pending: pe.pending ?? allPE.filter(e => e.status === 'PENDING').length,
+          active: pe.active ?? allPE.filter(e => e.status === 'ACTIVE').length,
+          total: pe.total ?? allPE.length
         },
         senderIds: {
-          pending: snd.pending ?? 0,
-          active: snd.active ?? 1,
-          total: (snd.active ?? 1) + (snd.pending ?? 0)
+          pending: snd.pending ?? allSenders.filter(s => s.status === 'PENDING').length,
+          active: snd.active ?? allSenders.filter(s => s.status === 'ACTIVE').length,
+          total: snd.total ?? allSenders.length
         },
         templates: {
-          pending: tpl.pending ?? 1,
-          active: tpl.active ?? 4,
-          total: (tpl.active ?? 4) + (tpl.pending ?? 1)
+          pending: tpl.pending ?? allTemplates.filter(t => t.status === 'PENDING').length,
+          active: tpl.active ?? allTemplates.filter(t => t.status === 'ACTIVE').length,
+          total: tpl.total ?? allTemplates.length
         },
         smsProviders: {
-          total: prv.total ?? 1,
-          active: prv.active ?? 1,
-          globalDefault: prv.globalDefault || { _id: '6a86fd61d9afabd50ec00dbc', name: 'MSG24', code: 'MSG24' }
+          total: prv.total ?? allProviders.length,
+          active: prv.active ?? allProviders.filter(p => p.status === 'ACTIVE').length,
+          globalDefault: prv.globalDefault || allProviders.find(p => p.isGlobalDefault) || allProviders[0] || null
         },
         smsMetrics: {
           totalSent: sms.totalSent ?? 0,
@@ -119,38 +124,32 @@ export class DataService {
       };
     }
 
-    const allUsers = this.users();
-    const allPE = this.principalEntities();
-    const allSenders = this.senderIds();
-    const allTemplates = this.contentTemplates();
-    const allProviders = this.smsProviders();
-
     return {
       users: {
-        total: allUsers.length || 16,
-        active: allUsers.filter(u => u.status === 'ACTIVE').length || 16,
+        total: allUsers.length,
+        active: allUsers.filter(u => u.status === 'ACTIVE').length,
         suspended: allUsers.filter(u => u.status === 'SUSPENDED').length,
         blocked: allUsers.filter(u => u.status === 'BLOCKED').length
       },
       principalEntities: {
-        pending: allPE.filter(pe => pe.status === 'PENDING').length || 2,
-        active: allPE.filter(pe => pe.status === 'ACTIVE').length || 4,
-        total: allPE.length || 6
+        pending: allPE.filter(pe => pe.status === 'PENDING').length,
+        active: allPE.filter(pe => pe.status === 'ACTIVE').length,
+        total: allPE.length
       },
       senderIds: {
-        pending: allSenders.filter(s => s.status === 'PENDING').length || 0,
-        active: allSenders.filter(s => s.status === 'ACTIVE').length || 1,
-        total: allSenders.length || 1
+        pending: allSenders.filter(s => s.status === 'PENDING').length,
+        active: allSenders.filter(s => s.status === 'ACTIVE').length,
+        total: allSenders.length
       },
       templates: {
-        pending: allTemplates.filter(t => t.status === 'PENDING').length || 1,
-        active: allTemplates.filter(t => t.status === 'ACTIVE').length || 4,
-        total: allTemplates.length || 5
+        pending: allTemplates.filter(t => t.status === 'PENDING').length,
+        active: allTemplates.filter(t => t.status === 'ACTIVE').length,
+        total: allTemplates.length
       },
       smsProviders: {
-        total: allProviders.length || 1,
-        active: allProviders.filter(p => p.status === 'ACTIVE').length || 1,
-        globalDefault: { _id: '6a86fd61d9afabd50ec00dbc', name: 'MSG24', code: 'MSG24' }
+        total: allProviders.length,
+        active: allProviders.filter(p => p.status === 'ACTIVE').length,
+        globalDefault: allProviders.find(p => p.isGlobalDefault) || allProviders[0] || null
       },
       smsMetrics: {
         totalSent: 0,
