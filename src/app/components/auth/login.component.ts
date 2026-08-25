@@ -76,7 +76,7 @@ import { IconComponent } from '../shared/icon.component';
           </div>
 
           <!-- Login Form matching Screenshot 2 -->
-          <form (ngSubmit)="onLogin()" class="space-y-5">
+          <form (ngSubmit)="onLogin()" class="space-y-5" autocomplete="off">
             <div class="space-y-1.5">
               <label class="text-xs font-bold text-slate-700">Email <span class="text-rose-500">*</span></label>
               <input 
@@ -84,8 +84,8 @@ import { IconComponent } from '../shared/icon.component';
                 [(ngModel)]="email" 
                 name="email" 
                 required
-                class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-xs md:text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/20 transition-all" 
-                placeholder="you@company.com">
+                autocomplete="off"
+                class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-xs md:text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/20 transition-all">
             </div>
 
             <div class="space-y-1.5">
@@ -96,8 +96,8 @@ import { IconComponent } from '../shared/icon.component';
                   [(ngModel)]="password" 
                   name="password" 
                   required
-                  class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-xs md:text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/20 transition-all pr-10" 
-                  placeholder="••••••••••••">
+                  autocomplete="new-password"
+                  class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-xs md:text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/20 transition-all pr-10">
                 <button 
                   type="button" 
                   (click)="showPassword = !showPassword" 
@@ -132,7 +132,7 @@ import { IconComponent } from '../shared/icon.component';
 export class LoginComponent {
   authService = inject(AuthService);
 
-  email = 'admin@scriza.in';
+  email = '';
   password = '';
   showPassword = false;
   rememberMe = false;
