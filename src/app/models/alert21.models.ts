@@ -122,10 +122,88 @@ export interface AdminAuditLog {
   adminName: string;
   adminRole: AdminRole;
   action: string;
-  entityType: 'USER' | 'PRINCIPAL_ENTITY' | 'SENDER_ID' | 'TEMPLATE' | 'PROVIDER' | 'ROUTING' | 'TELEMARKETER_ID';
+  entityType: 'USER' | 'PRINCIPAL_ENTITY' | 'SENDER_ID' | 'TEMPLATE' | 'PROVIDER' | 'ROUTING' | 'TELEMARKETER_ID' | 'BILLING_PRICING' | 'BANK_TRANSFER' | 'SMS_BALANCE';
   entityId: string;
   oldValue?: string;
   newValue?: string;
   ipAddress: string;
   createdAt: string;
+}
+
+export type PricingSlabStatus = 'ACTIVE' | 'INACTIVE';
+
+export interface PricingSlab {
+  id: string;
+  minQuantity: number;
+  maxQuantity: number;
+  ratePerSms: number;
+  gstPercentage: number;
+  status: PricingSlabStatus;
+  sortOrder: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type BankTransferStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+export interface BankTransferRequest {
+  id: string;
+  orderId: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  companyName: string;
+  smsQuantity: number;
+  ratePerSms: number;
+  baseAmount: number;
+  gstAmount: number;
+  totalAmount: number;
+  paymentMethod: string;
+  paymentStatus: 'PAID' | 'PENDING' | 'FAILED';
+  purchaseStatus: BankTransferStatus;
+  utrNumber: string;
+  paymentProof?: string;
+  paymentDate: string;
+  requestDate: string;
+  paidAt?: string;
+  approvedAt?: string;
+  approvedBy?: string;
+  rejectionRemarks?: string;
+}
+
+export type LedgerTransactionType = 
+  | 'PURCHASE_CREDIT' 
+  | 'ADMIN_CREDIT' 
+  | 'ADMIN_DEBIT' 
+  | 'SMS_DEBIT' 
+  | 'REFUND' 
+  | 'ADJUSTMENT';
+
+export interface SmsLedgerEntry {
+  id: string;
+  userId: string;
+  userName?: string;
+  type: LedgerTransactionType;
+  smsQuantity: number;
+  balanceBefore: number;
+  balanceAfter: number;
+  referenceType?: string;
+  referenceId?: string;
+  rate?: number;
+  amount?: number;
+  remarks: string;
+  createdBy: string;
+  createdAt: string;
+}
+
+export interface BillingDashboardStats {
+  totalSmsDistributed: number;
+  currentTotalUserSmsBalance: number;
+  totalSmsSold: number;
+  totalBillingValue: number;
+  gstCollected: number;
+  averageSellingPricePerSms: number;
+  totalPaymentReceived: number;
+  pendingBankTransferCount: number;
+  pendingBankTransferAmount: number;
 }

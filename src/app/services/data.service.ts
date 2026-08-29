@@ -1,6 +1,6 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, of, catchError } from 'rxjs';
 import { 
   AlertUser, 
   PrincipalEntity, 
@@ -10,7 +10,13 @@ import {
   ProviderRequestLog, 
   AdminAuditLog,
   UserStatus,
-  DltStatus
+  DltStatus,
+  PricingSlab,
+  PricingSlabStatus,
+  BankTransferRequest,
+  BankTransferStatus,
+  SmsLedgerEntry,
+  BillingDashboardStats
 } from '../models/alert21.models';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
@@ -31,6 +37,12 @@ export class DataService {
   contentTemplates = signal<ContentTemplate[]>([]);
   smsProviders = signal<SmsProvider[]>([]);
 
+  // Task #05 Billing & Balance Signals
+  pricingSlabs = signal<PricingSlab[]>([]);
+  bankTransfers = signal<BankTransferRequest[]>([]);
+  billingStats = signal<BillingDashboardStats | null>(null);
+  userLedger = signal<SmsLedgerEntry[]>([]);
+
   providerLogs = signal<ProviderRequestLog[]>([]);
   requestLogs = this.providerLogs;
 
@@ -45,6 +57,9 @@ export class DataService {
     this.fetchLiveSenderIds();
     this.fetchLiveTemplates();
     this.fetchLiveSmsProviders();
+    this.fetchLivePricingSlabs();
+    this.fetchLiveBankTransfers();
+    this.fetchBillingDashboardStats();
   }
 
   /**
@@ -82,11 +97,15 @@ export class DataService {
 
     if (live) {
       const u = live.users || {};
-      const pe = live.principalEntities || {};
-      const snd = live.senderIds || {};
-      const tpl = live.templates || {};
+      const pe = live.principalEntities || live.dlt?.principalEntities || {};
+      const snd = live.senderIds || live.dlt?.senderIds || {};
+      const tpl = live.templates || live.dlt?.templates || {};
       const prv = live.smsProviders || {};
-      const sms = live.smsMetrics || {};
+      const sms = live.sms || live.smsMetrics || {};
+
+      const peTotal = typeof pe === 'number' ? pe : (pe.total ?? allPE.length);
+      const sndTotal = typeof snd === 'number' ? snd : (snd.total ?? allSenders.length);
+      const tplTotal = typeof tpl === 'number' ? tpl : (tpl.total ?? allTemplates.length);
 
       return {
         users: {
@@ -96,19 +115,19 @@ export class DataService {
           blocked: u.blocked ?? allUsers.filter(user => user.status === 'BLOCKED').length
         },
         principalEntities: {
-          pending: pe.pending ?? allPE.filter(e => e.status === 'PENDING').length,
-          active: pe.active ?? allPE.filter(e => e.status === 'ACTIVE').length,
-          total: pe.total ?? allPE.length
+          pending: typeof pe === 'number' ? allPE.filter(e => e.status === 'PENDING').length : (pe.pending ?? allPE.filter(e => e.status === 'PENDING').length),
+          active: typeof pe === 'number' ? peTotal : (pe.active ?? allPE.filter(e => e.status === 'ACTIVE').length),
+          total: peTotal
         },
         senderIds: {
-          pending: snd.pending ?? allSenders.filter(s => s.status === 'PENDING').length,
-          active: snd.active ?? allSenders.filter(s => s.status === 'ACTIVE').length,
-          total: snd.total ?? allSenders.length
+          pending: typeof snd === 'number' ? allSenders.filter(s => s.status === 'PENDING').length : (snd.pending ?? allSenders.filter(s => s.status === 'PENDING').length),
+          active: typeof snd === 'number' ? sndTotal : (snd.active ?? allSenders.filter(s => s.status === 'ACTIVE').length),
+          total: sndTotal
         },
         templates: {
-          pending: tpl.pending ?? allTemplates.filter(t => t.status === 'PENDING').length,
-          active: tpl.active ?? allTemplates.filter(t => t.status === 'ACTIVE').length,
-          total: tpl.total ?? allTemplates.length
+          pending: typeof tpl === 'number' ? allTemplates.filter(t => t.status === 'PENDING').length : (tpl.pending ?? allTemplates.filter(t => t.status === 'PENDING').length),
+          active: typeof tpl === 'number' ? tplTotal : (tpl.active ?? allTemplates.filter(t => t.status === 'ACTIVE').length),
+          total: tplTotal
         },
         smsProviders: {
           total: prv.total ?? allProviders.length,
@@ -116,10 +135,10 @@ export class DataService {
           globalDefault: prv.globalDefault || allProviders.find(p => p.isGlobalDefault) || allProviders[0] || null
         },
         smsMetrics: {
-          totalSent: sms.totalSent ?? 0,
+          totalSent: sms.total ?? sms.totalSent ?? 0,
           delivered: sms.delivered ?? 0,
           failed: sms.failed ?? 0,
-          pending: sms.pending ?? 0
+          pending: sms.submitted ?? sms.pending ?? 0
         }
       };
     }
@@ -708,6 +727,504 @@ export class DataService {
       }
     } catch (e) {
       console.warn('Audit Logs API fallback.');
+    }
+  }
+
+  // ==========================================
+  // TASK #05: BILLING & SMS BALANCE MANAGEMENT
+  // ==========================================
+
+  /**
+   * GET Live SMS Pricing Slabs from https://app.alert21.in/back/api/admin/billing/pricing
+   */
+  async fetchLivePricingSlabs() {
+    try {
+      const token = this.authService.authToken();
+      const headers = new HttpHeaders({ 'Authorization': `Bearer ${token}` });
+      const response = await firstValueFrom(
+        this.http.get<any>('https://app.alert21.in/back/api/admin/billing/pricing', { headers })
+      );
+
+      if (response && response.success && Array.isArray(response.data)) {
+        const mappedSlabs: PricingSlab[] = response.data.map((item: any) => ({
+          id: item._id || item.id,
+          minQuantity: item.min_quantity ?? item.minQuantity ?? 100,
+          maxQuantity: item.max_quantity ?? item.maxQuantity ?? 10000,
+          ratePerSms: item.rate_per_sms ?? item.ratePerSms ?? 0.26,
+          gstPercentage: item.gst_percentage ?? item.gstPercentage ?? 18,
+          status: item.status || 'ACTIVE',
+          sortOrder: item.sort_order ?? item.sortOrder ?? 1,
+          createdAt: item.created_at || item.createdAt,
+          updatedAt: item.updated_at || item.updatedAt
+        }));
+        this.pricingSlabs.set(mappedSlabs);
+      }
+    } catch (e) {
+      console.warn('Pricing Slabs API fallback.');
+    }
+  }
+
+  /**
+   * POST Create Pricing Slab: https://app.alert21.in/back/api/admin/billing/pricing
+   */
+  async createPricingSlab(slabData: Partial<PricingSlab>): Promise<boolean> {
+    try {
+      const token = this.authService.authToken();
+      const headers = new HttpHeaders({
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      });
+
+      const body = {
+        min_quantity: Number(slabData.minQuantity),
+        max_quantity: Number(slabData.maxQuantity),
+        rate_per_sms: Number(slabData.ratePerSms),
+        gst_percentage: Number(slabData.gstPercentage ?? 18),
+        status: slabData.status || 'ACTIVE',
+        sort_order: Number(slabData.sortOrder ?? 1)
+      };
+
+      const response = await firstValueFrom(
+        this.http.post<any>('https://app.alert21.in/back/api/admin/billing/pricing', body, { headers })
+      );
+
+      if (response && response.success) {
+        await this.fetchLivePricingSlabs();
+        this.toastService.showSuccess('Pricing Slab Created', 'New SMS Pricing Slab created successfully.');
+        return true;
+      }
+    } catch (e: any) {
+      console.error('Create pricing slab API error', e);
+      this.toastService.showError('Creation Failed', e?.error?.message || 'Could not create pricing slab.');
+    }
+    return false;
+  }
+
+  /**
+   * PUT Update Pricing Slab: https://app.alert21.in/back/api/admin/billing/pricing/{id}
+   */
+  async updatePricingSlab(id: string, slabData: Partial<PricingSlab>): Promise<boolean> {
+    try {
+      const token = this.authService.authToken();
+      const headers = new HttpHeaders({
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      });
+
+      const body: any = {
+        min_quantity: Number(slabData.minQuantity),
+        max_quantity: Number(slabData.maxQuantity),
+        rate_per_sms: Number(slabData.ratePerSms),
+        gst_percentage: Number(slabData.gstPercentage ?? 18),
+        status: slabData.status,
+        sort_order: Number(slabData.sortOrder ?? 1)
+      };
+
+      const response = await firstValueFrom(
+        this.http.put<any>(`https://app.alert21.in/back/api/admin/billing/pricing/${id}`, body, { headers })
+      );
+
+      if (response && response.success) {
+        await this.fetchLivePricingSlabs();
+        this.toastService.showSuccess('Pricing Slab Updated', 'SMS Pricing Slab updated successfully.');
+        return true;
+      }
+    } catch (e: any) {
+      console.error('Update pricing slab API error', e);
+      this.toastService.showError('Update Failed', e?.error?.message || 'Could not update pricing slab.');
+    }
+    return false;
+  }
+
+  /**
+   * GET Live Bank Transfer Requests from https://app.alert21.in/back/api/admin/billing/bank-transfers
+   */
+  async fetchLiveBankTransfers() {
+    try {
+      const token = this.authService.authToken();
+      const headers = new HttpHeaders({ 'Authorization': `Bearer ${token}` });
+      const response = await firstValueFrom(
+        this.http.get<any>('https://app.alert21.in/back/api/admin/billing/bank-transfers', { headers })
+      );
+
+      if (response && response.success && Array.isArray(response.data)) {
+        // Try fetching orders and dashboard recentBankTransfers to resolve order details
+        let ordersMap = new Map<string, any>();
+        
+        // 1. Resolve order details from dashboard recentBankTransfers if available
+        try {
+          const dashRes = await firstValueFrom(
+            this.http.get<any>(environment.dashboardUrl, { headers }).pipe(catchError(() => of(null)))
+          );
+          if (dashRes && dashRes.success && Array.isArray(dashRes.data?.recentBankTransfers)) {
+            dashRes.data.recentBankTransfers.forEach((r: any) => {
+              if (r.order_id) ordersMap.set(String(r.order_id), r);
+              if (r.id) ordersMap.set(String(r.id), r);
+              if (r._id) ordersMap.set(String(r._id), r);
+              if (r.utr_number) ordersMap.set(String(r.utr_number), r);
+              if (r.sms_order_id) ordersMap.set(String(r.sms_order_id), r);
+            });
+          }
+        } catch (e) {}
+
+        const mappedTransfers: BankTransferRequest[] = response.data.map((item: any) => {
+          let order = typeof item.order_id === 'object' && item.order_id !== null ? item.order_id : null;
+          const orderKey = String(item.order_id || item.orderId || item._id);
+          const utrKey = String(item.utr_number || item.utrNumber || '');
+
+          if (!order && ordersMap.has(orderKey)) {
+            order = ordersMap.get(orderKey);
+          } else if (!order && utrKey && ordersMap.has(utrKey)) {
+            order = ordersMap.get(utrKey);
+          }
+
+          const orderIdStr = order ? (order.order_id || order.sms_order_id || order.orderId || order.order_number || order._id) : orderKey;
+
+          const smsQty = order?.sms_quantity ?? order?.smsQuantity ?? item.sms_quantity ?? item.smsQuantity ?? item.quantity ?? 0;
+          const rate = order?.rate_per_sms ?? order?.ratePerSms ?? item.rate_per_sms ?? item.ratePerSms ?? item.rate ?? 0;
+          const baseAmt = order?.base_amount ?? order?.baseAmount ?? item.base_amount ?? item.baseAmount ?? (smsQty && rate ? (smsQty * rate) : 0);
+          const gstAmt = order?.gst_amount ?? order?.gstAmount ?? item.gst_amount ?? item.gstAmount ?? (baseAmt ? (baseAmt * 0.18) : 0);
+          const totalAmt = order?.total_amount ?? order?.totalAmount ?? item.total_amount ?? item.totalAmount ?? item.amount ?? (baseAmt + gstAmt) ?? 0;
+
+          let proofUrl = order?.payment_proof || item.payment_proof || item.paymentProof || '';
+          if (proofUrl && proofUrl.startsWith('/')) {
+            proofUrl = `https://app.alert21.in/back${proofUrl}`;
+          }
+
+          return {
+            id: item._id || item.id,
+            orderId: orderIdStr || 'ORD-000',
+            userId: item.user_id?._id || item.user_id || item.userId || '',
+            userName: item.user_id?.fullName || item.userName || 'User',
+            userEmail: item.user_id?.email || item.userEmail || '',
+            companyName: item.user_id?.companyName || item.companyName || '',
+            smsQuantity: smsQty,
+            ratePerSms: rate,
+            baseAmount: baseAmt,
+            gstAmount: gstAmt,
+            totalAmount: totalAmt,
+            paymentMethod: item.payment_method || item.paymentMethod || 'BANK_TRANSFER',
+            paymentStatus: item.payment_status || item.paymentStatus || (item.status === 'APPROVED' ? 'PAID' : 'PENDING'),
+            purchaseStatus: (item.status || item.purchase_status || item.purchaseStatus || 'PENDING').toUpperCase() as BankTransferStatus,
+            utrNumber: item.utr_number || item.utrNumber || item.reference_id || 'N/A',
+            paymentProof: proofUrl,
+            paymentDate: item.payment_date || item.paymentDate || item.createdAt || new Date().toISOString(),
+            requestDate: item.createdAt || item.requestDate || new Date().toISOString(),
+            paidAt: item.paid_at || item.paidAt,
+            approvedAt: item.approved_at || item.approvedAt,
+            approvedBy: item.approved_by || item.approvedBy,
+            rejectionRemarks: item.rejection_remarks || item.remarks
+          };
+        });
+        this.bankTransfers.set(mappedTransfers);
+      }
+    } catch (e) {
+      console.warn('Bank Transfers API fallback.');
+    }
+  }
+
+  /**
+   * POST Approve Bank Transfer: https://app.alert21.in/back/api/admin/billing/bank-transfers/{id}/approve
+   */
+  async approveBankTransfer(id: string, orderId?: string, adminName: string = 'Admin'): Promise<boolean> {
+    try {
+      const token = this.authService.authToken();
+      const headers = new HttpHeaders({
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      });
+
+      const body = { order_id: orderId || id, orderId: orderId || id, id: id };
+      const response = await firstValueFrom(
+        this.http.post<any>(`https://app.alert21.in/back/api/admin/billing/bank-transfers/${id}/approve`, body, { headers })
+      );
+
+      if (response && response.success) {
+        this.bankTransfers.update(list => list.map(t => (t.id === id || (orderId && t.orderId === orderId)) ? {
+          ...t,
+          purchaseStatus: 'APPROVED',
+          paymentStatus: 'PAID',
+          approvedAt: new Date().toISOString(),
+          approvedBy: adminName
+        } : t));
+
+        await this.fetchLiveUsers();
+        await this.fetchBillingDashboardStats();
+        this.toastService.showSuccess('Bank Transfer Approved', 'Payment approved and SMS balance credited to user.');
+        return true;
+      }
+    } catch (e: any) {
+      console.error('Approve bank transfer error', e);
+      this.toastService.showError('Approval Failed', e?.error?.message || 'Failed to approve bank transfer.');
+    }
+    return false;
+  }
+
+  /**
+   * POST Reject Bank Transfer: https://app.alert21.in/back/api/admin/billing/bank-transfers/{id}/reject
+   */
+  async rejectBankTransfer(id: string, remarks: string, orderId?: string, adminName: string = 'Admin'): Promise<boolean> {
+    try {
+      const token = this.authService.authToken();
+      const headers = new HttpHeaders({
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      });
+
+      const body = { remarks: remarks.trim(), order_id: orderId || id, orderId: orderId || id, id: id };
+      const response = await firstValueFrom(
+        this.http.post<any>(`https://app.alert21.in/back/api/admin/billing/bank-transfers/${id}/reject`, body, { headers })
+      );
+
+      if (response && response.success) {
+        this.bankTransfers.update(list => list.map(t => (t.id === id || (orderId && t.orderId === orderId)) ? {
+          ...t,
+          purchaseStatus: 'REJECTED',
+          rejectionRemarks: remarks
+        } : t));
+
+        await this.fetchBillingDashboardStats();
+        this.toastService.showSuccess('Bank Transfer Rejected', 'Request has been marked as REJECTED.');
+        return true;
+      }
+    } catch (e: any) {
+      console.error('Reject bank transfer error', e);
+      this.toastService.showError('Rejection Failed', e?.error?.message || 'Failed to reject bank transfer.');
+    }
+    return false;
+  }
+
+  /**
+   * POST Admin Manual SMS Credit
+   */
+  async creditUserSms(userId: string, quantity: number, remarks: string, adminName: string = 'Admin'): Promise<boolean> {
+    const token = this.authService.authToken();
+    const headers = new HttpHeaders({
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    });
+
+    const body = {
+      user_id: userId,
+      userId: userId,
+      sms_quantity: Number(quantity),
+      quantity: Number(quantity),
+      smsQuantity: Number(quantity),
+      amount: Number(quantity),
+      remarks: remarks.trim(),
+      note: remarks.trim(),
+      admin_name: adminName
+    };
+
+    const candidateUrls = [
+      `https://app.alert21.in/back/api/admin/users/${userId}/sms-credit`,
+      `https://app.alert21.in/back/api/admin/billing/users/${userId}/sms-credit`,
+      `https://app.alert21.in/back/api/admin/users/${userId}/credit`,
+      `https://app.alert21.in/back/api/admin/billing/credit`,
+      `https://app.alert21.in/back/api/admin/billing/sms-credit`
+    ];
+
+    let lastError = '';
+    for (const url of candidateUrls) {
+      try {
+        const response = await firstValueFrom(
+          this.http.post<any>(url, body, { headers })
+        );
+
+        if (response && (response.success || response.status === 'success' || response.data)) {
+          this.users.update(list => list.map(u => u.id === userId ? {
+            ...u,
+            smsBalance: (u.smsBalance ?? 0) + Number(quantity)
+          } : u));
+
+          await this.fetchBillingDashboardStats();
+          this.toastService.showSuccess('SMS Credited', `Successfully credited ${quantity} SMS to user balance.`);
+          return true;
+        }
+      } catch (e: any) {
+        lastError = e?.error?.message || e?.message || lastError;
+      }
+    }
+
+    this.toastService.showError('Credit Failed', lastError || 'Failed to credit SMS to user.');
+    return false;
+  }
+
+  /**
+   * POST Admin Manual SMS Debit
+   */
+  async debitUserSms(userId: string, quantity: number, remarks: string, adminName: string = 'Admin'): Promise<boolean> {
+    const token = this.authService.authToken();
+    const headers = new HttpHeaders({
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    });
+
+    const body = {
+      user_id: userId,
+      userId: userId,
+      sms_quantity: Number(quantity),
+      quantity: Number(quantity),
+      smsQuantity: Number(quantity),
+      amount: Number(quantity),
+      remarks: remarks.trim(),
+      note: remarks.trim(),
+      admin_name: adminName
+    };
+
+    const candidateUrls = [
+      `https://app.alert21.in/back/api/admin/users/${userId}/sms-debit`,
+      `https://app.alert21.in/back/api/admin/billing/users/${userId}/sms-debit`,
+      `https://app.alert21.in/back/api/admin/users/${userId}/debit`,
+      `https://app.alert21.in/back/api/admin/billing/debit`,
+      `https://app.alert21.in/back/api/admin/billing/sms-debit`
+    ];
+
+    let lastError = '';
+    for (const url of candidateUrls) {
+      try {
+        const response = await firstValueFrom(
+          this.http.post<any>(url, body, { headers })
+        );
+
+        if (response && (response.success || response.status === 'success' || response.data)) {
+          this.users.update(list => list.map(u => u.id === userId ? {
+            ...u,
+            smsBalance: Math.max(0, (u.smsBalance ?? 0) - Number(quantity))
+          } : u));
+
+          await this.fetchBillingDashboardStats();
+          this.toastService.showSuccess('SMS Debited', `Successfully debited ${quantity} SMS from user balance.`);
+          return true;
+        }
+      } catch (e: any) {
+        lastError = e?.error?.message || e?.message || lastError;
+      }
+    }
+
+    this.toastService.showError('Debit Failed', lastError || 'Failed to debit SMS from user.');
+    return false;
+  }
+
+  /**
+   * GET Live User SMS Ledger
+   */
+  async fetchUserSmsLedger(userId: string): Promise<SmsLedgerEntry[]> {
+    const token = this.authService.authToken();
+    const headers = new HttpHeaders({ 'Authorization': `Bearer ${token}` });
+
+    const candidateUrls = [
+      `https://app.alert21.in/back/api/admin/users/${userId}/sms-ledger`,
+      `https://app.alert21.in/back/api/admin/billing/users/${userId}/ledger`,
+      `https://app.alert21.in/back/api/admin/users/${userId}/ledger`,
+      `https://app.alert21.in/back/api/admin/billing/ledger/${userId}`,
+      `https://app.alert21.in/back/api/billing/ledger/${userId}`
+    ];
+
+    for (const url of candidateUrls) {
+      try {
+        const response = await firstValueFrom(
+          this.http.get<any>(url, { headers })
+        );
+
+        const list = Array.isArray(response?.data) 
+          ? response.data 
+          : (Array.isArray(response?.data?.ledger) ? response.data.ledger : (Array.isArray(response) ? response : null));
+
+        if (list && Array.isArray(list)) {
+          const mappedEntries: SmsLedgerEntry[] = list.map((item: any) => ({
+            id: item._id || item.id,
+            userId: item.user_id || userId,
+            userName: item.user_name || item.userName,
+            type: item.type || item.transaction_type || 'ADMIN_CREDIT',
+            smsQuantity: item.sms_quantity ?? item.quantity ?? 0,
+            balanceBefore: item.balance_before ?? item.balanceBefore ?? 0,
+            balanceAfter: item.balance_after ?? item.balanceAfter ?? 0,
+            referenceType: item.reference_type || item.referenceType,
+            referenceId: item.reference_id || item.referenceId,
+            rate: item.rate ?? item.rate_per_sms,
+            amount: item.amount ?? item.total_amount,
+            remarks: item.remarks || item.note || '',
+            createdBy: item.created_by || item.createdBy || 'Admin',
+            createdAt: item.created_at || item.createdAt || new Date().toISOString()
+          }));
+          this.userLedger.set(mappedEntries);
+          return mappedEntries;
+        }
+      } catch (e) {}
+    }
+
+    return [];
+  }
+
+  /**
+   * GET Live Dashboard Stats from https://app.alert21.in/back/api/admin/dashboard
+   */
+  async fetchBillingDashboardStats() {
+    try {
+      const token = this.authService.authToken();
+      const headers = new HttpHeaders({ 'Authorization': `Bearer ${token}` });
+
+      const response = await firstValueFrom(
+        this.http.get<any>(environment.dashboardUrl, { headers })
+      );
+
+      if (response && response.success && response.data) {
+        const d = response.data;
+        const m = d.metrics || d;
+
+        const stats: BillingDashboardStats = {
+          totalSmsDistributed: m.totalSmsDistributed ?? m.total_sms_distributed ?? 0,
+          currentTotalUserSmsBalance: m.userSmsBalance ?? m.currentTotalUserSmsBalance ?? m.current_total_user_sms_balance ?? 0,
+          totalSmsSold: m.totalSmsSold ?? m.total_sms_sold ?? 0,
+          totalBillingValue: m.totalBillingValue ?? m.total_billing_value ?? 0,
+          gstCollected: m.gstCollected ?? m.gst_collected ?? 0,
+          averageSellingPricePerSms: m.averageSellingPrice ?? m.averageSellingPricePerSms ?? m.average_selling_price_per_sms ?? 0.22,
+          totalPaymentReceived: m.totalPaymentReceived ?? m.total_payment_received ?? 0,
+          pendingBankTransferCount: m.pendingBankTransfers?.count ?? m.pendingBankTransferCount ?? m.pending_bank_transfer_count ?? 0,
+          pendingBankTransferAmount: m.pendingBankTransfers?.amount ?? m.pendingBankTransferAmount ?? m.pending_bank_transfer_amount ?? 0
+        };
+        this.billingStats.set(stats);
+
+        // Also if backend dashboard returns rich recentBankTransfers, update bankTransfers signal
+        if (Array.isArray(d.recentBankTransfers) && d.recentBankTransfers.length > 0) {
+          const mappedRecent: BankTransferRequest[] = d.recentBankTransfers.map((item: any) => {
+            let proofUrl = item.payment_proof || item.paymentProof || '';
+            if (proofUrl && proofUrl.startsWith('/')) {
+              proofUrl = `https://app.alert21.in/back${proofUrl}`;
+            }
+
+            return {
+              id: item._id || item.id,
+              orderId: item.order_id || item.sms_order_id || item.orderId || item._id || 'ORD-000',
+              userId: item.user_id?._id || item.user_id || item.userId || '',
+              userName: item.user_id?.fullName || item.fullName || item.userName || 'User',
+              userEmail: item.user_id?.email || item.email || item.userEmail || '',
+              companyName: item.user_id?.companyName || item.companyName || '',
+              smsQuantity: item.sms_quantity ?? item.smsQuantity ?? item.quantity ?? 0,
+              ratePerSms: item.rate_per_sms ?? item.ratePerSms ?? item.rate ?? 0,
+              baseAmount: item.base_amount ?? item.baseAmount ?? 0,
+              gstAmount: item.gst_amount ?? item.gstAmount ?? 0,
+              totalAmount: item.total_amount ?? item.totalAmount ?? 0,
+              paymentMethod: item.payment_method || item.paymentMethod || 'BANK_TRANSFER',
+              paymentStatus: item.payment_status || item.paymentStatus || (item.status === 'APPROVED' ? 'PAID' : 'PENDING'),
+              purchaseStatus: (item.status || item.purchase_status || item.purchaseStatus || 'PENDING').toUpperCase() as BankTransferStatus,
+              utrNumber: item.utr_number || item.utrNumber || item.reference_id || 'N/A',
+              paymentProof: proofUrl,
+              paymentDate: item.payment_date || item.paymentDate || item.createdAt || new Date().toISOString(),
+              requestDate: item.createdAt || item.requestDate || new Date().toISOString(),
+              paidAt: item.paid_at || item.paidAt,
+              approvedAt: item.approved_at || item.approvedAt,
+              approvedBy: item.approved_by || item.approvedBy,
+              rejectionRemarks: item.rejection_remarks || item.remarks
+            };
+          });
+
+          this.bankTransfers.set(mappedRecent);
+        }
+      }
+    } catch (e) {
+      console.warn('Dashboard Stats API fallback.');
     }
   }
 }

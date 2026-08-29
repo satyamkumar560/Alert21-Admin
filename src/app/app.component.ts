@@ -16,6 +16,9 @@ import { SmsLogsComponent } from './components/logs/sms-logs.component';
 import { AuditLogsComponent } from './components/logs/audit-logs.component';
 import { SettingsComponent } from './components/settings/settings.component';
 import { LoginComponent } from './components/auth/login.component';
+import { SmsPricingComponent } from './components/billing/sms-pricing.component';
+import { BankTransfersComponent } from './components/billing/bank-transfers.component';
+import { BillingDashboardComponent } from './components/billing/billing-dashboard.component';
 
 import { ToastComponent } from './components/shared/toast.component';
 
@@ -29,6 +32,9 @@ import { ToastComponent } from './components/shared/toast.component';
     HeaderComponent,
     DashboardComponent,
     UsersComponent,
+    SmsPricingComponent,
+    BankTransfersComponent,
+    BillingDashboardComponent,
     DltApprovalsComponent,
     SenderIdsComponent,
     DltTemplatesComponent,
@@ -74,6 +80,9 @@ import { ToastComponent } from './components/shared/toast.component';
           <main class="flex-1 mt-[70px] p-6 max-w-7xl w-full mx-auto">
             <app-dashboard *ngIf="activeTab === 'dashboard'" (navigate)="onTabChange($event)"></app-dashboard>
             <app-users *ngIf="activeTab === 'users'"></app-users>
+            <app-sms-pricing *ngIf="activeTab === 'sms-pricing'"></app-sms-pricing>
+            <app-bank-transfers *ngIf="activeTab === 'bank-transfers'"></app-bank-transfers>
+            <app-billing-dashboard *ngIf="activeTab === 'billing-dashboard'" (navigate)="onTabChange($event)"></app-billing-dashboard>
             <app-dlt-approvals *ngIf="activeTab === 'dlt-pe'"></app-dlt-approvals>
             <app-sender-ids *ngIf="activeTab === 'dlt-sender'"></app-sender-ids>
             <app-dlt-templates *ngIf="activeTab === 'dlt-template'"></app-dlt-templates>

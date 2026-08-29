@@ -21,8 +21,8 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
         ) {
           toastService.showError('Session Expired', 'Your admin session has expired. Please login again.');
           authService.logout();
-        } else if (body.success === false && body.message) {
-          // General API Error handled gracefully
+        } else if (body.success === false && body.message && req.method !== 'GET') {
+          // Only show toast on user actions (POST, PUT, DELETE), not background GET queries
           toastService.showError('API Error', body.message);
         }
       }
@@ -32,7 +32,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
       if (error.status === 401 || error.status === 403) {
         toastService.showError('Unauthorized', 'Your session has expired or is invalid.');
         authService.logout();
-      } else {
+      } else if (req.method !== 'GET') {
         const msg = error.error?.message || error.message || 'An unexpected server error occurred.';
         toastService.showError('Server Error', msg);
       }

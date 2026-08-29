@@ -205,6 +205,9 @@ import { DataService } from '../../services/data.service';
 export type NavTab =
   | 'dashboard'
   | 'users'
+  | 'sms-pricing'
+  | 'bank-transfers'
+  | 'billing-dashboard'
   | 'dlt-pe'
   | 'dlt-sender'
   | 'dlt-template'
@@ -232,7 +235,7 @@ export type NavTab =
       </div>
 
       <!-- Navigation Links -->
-      <div class="flex-1 overflow-y-auto px-3.5 py-6 space-y-1">
+      <div class="flex-1 overflow-y-auto px-3.5 py-4 space-y-1">
 
         <!-- Dashboard -->
         <button
@@ -257,9 +260,58 @@ export type NavTab =
 
           <span
             class="ml-auto bg-slate-800 text-slate-400 text-[10px] px-2 py-0.5 rounded-full font-bold">
-            4
+            {{ dataService.users().length }}
           </span>
         </button>
+
+        <!-- BILLING SECTION (Task #05) -->
+        <div class="pt-3 pb-1 px-3">
+          <p class="text-[10px] font-extrabold uppercase text-slate-400 tracking-wider">Billing & SMS</p>
+        </div>
+
+        <!-- SMS Pricing -->
+        <button
+          type="button"
+          (click)="onSelectTab('sms-pricing')"
+          [ngClass]="getNavClass('sms-pricing')"
+          class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all">
+
+          <app-icon name="tag" [size]="16"></app-icon>
+          <span>SMS Pricing Slabs</span>
+        </button>
+
+        <!-- Bank Transfer Requests -->
+        <button
+          type="button"
+          (click)="onSelectTab('bank-transfers')"
+          [ngClass]="getNavClass('bank-transfers')"
+          class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all">
+
+          <app-icon name="bank" [size]="16"></app-icon>
+          <span>Bank Transfers</span>
+
+          <span
+            *ngIf="pendingTransfersCount() > 0"
+            class="ml-auto bg-amber-500 text-slate-950 text-[10px] px-2 py-0.5 rounded-full font-extrabold shadow-sm">
+            {{ pendingTransfersCount() }}
+          </span>
+        </button>
+
+        <!-- Billing Dashboard -->
+        <button
+          type="button"
+          (click)="onSelectTab('billing-dashboard')"
+          [ngClass]="getNavClass('billing-dashboard')"
+          class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all">
+
+          <app-icon name="credit-card" [size]="16"></app-icon>
+          <span>Billing Dashboard</span>
+        </button>
+
+        <!-- DLT REGISTRY SECTION -->
+        <div class="pt-3 pb-1 px-3">
+          <p class="text-[10px] font-extrabold uppercase text-slate-400 tracking-wider">DLT Compliance</p>
+        </div>
 
         <!-- Principal Entities -->
         <button
@@ -294,6 +346,27 @@ export type NavTab =
           <span>DLT Templates</span>
         </button>
 
+        <!-- DLT Hash Tool -->
+        <button
+          type="button"
+          (click)="onSelectTab('dlt-hash-tool')"
+          [ngClass]="getNavClass('dlt-hash-tool')"
+          class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all relative">
+
+          <app-icon name="hash" [size]="16"></app-icon>
+          <span>DLT Hash Tool</span>
+
+          <span
+            class="ml-auto bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-bold text-[9px] px-1.5 py-0.5 rounded shadow">
+            SHA256
+          </span>
+        </button>
+
+        <!-- GATEWAYS & LOGS SECTION -->
+        <div class="pt-3 pb-1 px-3">
+          <p class="text-[10px] font-extrabold uppercase text-slate-400 tracking-wider">Gateways & Logs</p>
+        </div>
+
         <!-- SMS Providers -->
         <button
           type="button"
@@ -314,22 +387,6 @@ export type NavTab =
 
           <app-icon name="route" [size]="16"></app-icon>
           <span>Provider Routing</span>
-        </button>
-
-        <!-- DLT Hash Tool -->
-        <button
-          type="button"
-          (click)="onSelectTab('dlt-hash-tool')"
-          [ngClass]="getNavClass('dlt-hash-tool')"
-          class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all relative">
-
-          <app-icon name="hash" [size]="16"></app-icon>
-          <span>DLT Hash Tool</span>
-
-          <span
-            class="ml-auto bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-bold text-[9px] px-1.5 py-0.5 rounded shadow">
-            SHA256
-          </span>
         </button>
 
         <!-- SMS Logs / Reports -->
@@ -443,6 +500,10 @@ export class SidebarComponent {
       || providers[0]
       || null;
   });
+
+  pendingTransfersCount(): number {
+    return this.dataService.bankTransfers().filter(t => t.purchaseStatus === 'PENDING').length;
+  }
 
   onSelectTab(tab: NavTab) {
     this.tabChange.emit(tab);

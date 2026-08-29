@@ -159,6 +159,60 @@ import { CommonModule } from '@angular/common';
       <ng-container *ngIf="name === 'sparkles'">
         <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
       </ng-container>
+
+      <!-- Credit Card -->
+      <ng-container *ngIf="name === 'credit-card'">
+        <rect width="20" height="14" x="2" y="5" rx="2"/>
+        <line x1="2" x2="22" y1="10" y2="10"/>
+      </ng-container>
+
+      <!-- Bank / Building -->
+      <ng-container *ngIf="name === 'bank' || name === 'building'">
+        <line x1="3" x2="21" y1="21" y2="21"/>
+        <line x1="6" x2="6" y1="18" y2="11"/>
+        <line x1="10" x2="10" y1="18" y2="11"/>
+        <line x1="14" x2="14" y1="18" y2="11"/>
+        <line x1="18" x2="18" y1="18" y2="11"/>
+        <polygon points="12 2 20 7 4 7"/>
+      </ng-container>
+
+      <!-- Plus -->
+      <ng-container *ngIf="name === 'plus'">
+        <line x1="12" x2="12" y1="5" y2="19"/>
+        <line x1="5" x2="19" y1="12" y2="12"/>
+      </ng-container>
+
+      <!-- Minus -->
+      <ng-container *ngIf="name === 'minus'">
+        <line x1="5" x2="19" y1="12" y2="12"/>
+      </ng-container>
+
+      <!-- Tag / Pricing -->
+      <ng-container *ngIf="name === 'tag'">
+        <path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/>
+        <path d="M7 7h.01"/>
+      </ng-container>
+
+      <!-- Indian Rupee / Currency -->
+      <ng-container *ngIf="name === 'indian-rupee' || name === 'dollar-sign'">
+        <path d="M6 3h12"/>
+        <path d="M6 8h12"/>
+        <path d="m6 13 8.5 8"/>
+        <path d="M6 13h3a4 4 0 0 0 0-8"/>
+      </ng-container>
+
+      <!-- External Link -->
+      <ng-container *ngIf="name === 'external-link'">
+        <path d="M15 3h6v6"/>
+        <path d="M10 14 21 3"/>
+        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+      </ng-container>
+
+      <!-- X / Close -->
+      <ng-container *ngIf="name === 'x'">
+        <line x1="18" x2="6" y1="6" y2="18"/>
+        <line x1="6" x2="18" y1="6" y2="18"/>
+      </ng-container>
     </svg>
   `
 })
