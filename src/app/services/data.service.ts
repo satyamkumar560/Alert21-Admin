@@ -934,12 +934,11 @@ export class DataService {
         'Content-Type': 'application/json'
       });
 
-      const body = { order_id: orderId || id, orderId: orderId || id, id: id };
       const response = await firstValueFrom(
-        this.http.post<any>(`https://app.alert21.in/back/api/admin/billing/bank-transfers/${id}/approve`, body, { headers })
+        this.http.post<any>(`https://app.alert21.in/back/api/admin/billing/bank-transfers/${id}/approve`, {}, { headers })
       );
 
-      if (response && response.success) {
+      if (response && (response.success || response.status === 'success' || response.data)) {
         this.bankTransfers.update(list => list.map(t => (t.id === id || (orderId && t.orderId === orderId)) ? {
           ...t,
           purchaseStatus: 'APPROVED',
@@ -971,12 +970,12 @@ export class DataService {
         'Content-Type': 'application/json'
       });
 
-      const body = { remarks: remarks.trim(), order_id: orderId || id, orderId: orderId || id, id: id };
+      const body = { remarks: remarks.trim() };
       const response = await firstValueFrom(
         this.http.post<any>(`https://app.alert21.in/back/api/admin/billing/bank-transfers/${id}/reject`, body, { headers })
       );
 
-      if (response && response.success) {
+      if (response && (response.success || response.status === 'success' || response.data)) {
         this.bankTransfers.update(list => list.map(t => (t.id === id || (orderId && t.orderId === orderId)) ? {
           ...t,
           purchaseStatus: 'REJECTED',
