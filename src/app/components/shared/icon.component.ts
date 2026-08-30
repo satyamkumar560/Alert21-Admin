@@ -213,6 +213,77 @@ import { CommonModule } from '@angular/common';
         <line x1="18" x2="6" y1="6" y2="18"/>
         <line x1="6" x2="18" y1="6" y2="18"/>
       </ng-container>
+
+      <!-- Globe / Website -->
+      <ng-container *ngIf="name === 'globe'">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="2" x2="22" y1="12" y2="12"/>
+        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+      </ng-container>
+
+      <!-- Activity / Pulse -->
+      <ng-container *ngIf="name === 'activity'">
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+      </ng-container>
+
+      <!-- Alert Triangle / Warning -->
+      <ng-container *ngIf="name === 'alert-triangle'">
+        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+        <line x1="12" x2="12" y1="9" y2="13"/>
+        <line x1="12" x2="12.01" y1="17" y2="17"/>
+      </ng-container>
+
+      <!-- Bell / Alert -->
+      <ng-container *ngIf="name === 'bell'">
+        <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
+        <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+      </ng-container>
+
+      <!-- Clock / History -->
+      <ng-container *ngIf="name === 'clock'">
+        <circle cx="12" cy="12" r="10"/>
+        <polyline points="12 6 12 12 16 14"/>
+      </ng-container>
+
+      <!-- Play -->
+      <ng-container *ngIf="name === 'play'">
+        <polygon points="5 3 19 12 5 21 5 3"/>
+      </ng-container>
+
+      <!-- Pause -->
+      <ng-container *ngIf="name === 'pause'">
+        <rect width="4" height="16" x="6" y="4"/>
+        <rect width="4" height="16" x="14" y="4"/>
+      </ng-container>
+
+      <!-- Zap / Lightning -->
+      <ng-container *ngIf="name === 'zap'">
+        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+      </ng-container>
+
+      <!-- Layers / Sources -->
+      <ng-container *ngIf="name === 'layers'">
+        <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+        <polyline points="2 17 12 22 22 17"/>
+        <polyline points="2 12 12 17 22 12"/>
+      </ng-container>
+
+      <!-- Mail / Email -->
+      <ng-container *ngIf="name === 'mail'">
+        <rect width="20" height="16" x="2" y="4" rx="2"/>
+        <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+      </ng-container>
+
+      <!-- Smartphone / Mobile -->
+      <ng-container *ngIf="name === 'smartphone'">
+        <rect width="14" height="20" x="5" y="2" rx="2" ry="2"/>
+        <line x1="12" x2="12.01" y1="18" y2="18"/>
+      </ng-container>
+
+      <!-- Message Square / WhatsApp -->
+      <ng-container *ngIf="name === 'message-square'">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </ng-container>
     </svg>
   `
 })

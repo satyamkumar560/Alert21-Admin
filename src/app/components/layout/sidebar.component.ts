@@ -208,6 +208,13 @@ export type NavTab =
   | 'sms-pricing'
   | 'bank-transfers'
   | 'billing-dashboard'
+  | 'monitoring-dashboard'
+  | 'monitoring-monitors'
+  | 'monitoring-incidents'
+  | 'monitoring-plans'
+  | 'monitoring-subscriptions'
+  | 'monitoring-sources'
+  | 'monitoring-templates'
   | 'dlt-pe'
   | 'dlt-sender'
   | 'dlt-template'
@@ -306,6 +313,99 @@ export type NavTab =
 
           <app-icon name="credit-card" [size]="16"></app-icon>
           <span>Billing Dashboard</span>
+        </button>
+
+        <!-- WEBSITE MONITORING SECTION (PHASE 1) -->
+        <div class="pt-3 pb-1 px-3">
+          <p class="text-[10px] font-extrabold uppercase text-slate-400 tracking-wider">Website Monitoring</p>
+        </div>
+
+        <!-- Monitoring Dashboard -->
+        <button
+          type="button"
+          (click)="onSelectTab('monitoring-dashboard')"
+          [ngClass]="getNavClass('monitoring-dashboard')"
+          class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all">
+
+          <app-icon name="activity" [size]="16"></app-icon>
+          <span>Monitoring Dashboard</span>
+        </button>
+
+        <!-- All Monitors -->
+        <button
+          type="button"
+          (click)="onSelectTab('monitoring-monitors')"
+          [ngClass]="getNavClass('monitoring-monitors')"
+          class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all">
+
+          <app-icon name="globe" [size]="16"></app-icon>
+          <span>All Monitors</span>
+
+          <span
+            class="ml-auto bg-slate-800 text-slate-300 text-[10px] px-2 py-0.5 rounded-full font-bold">
+            {{ dataService.websiteMonitors().length }}
+          </span>
+        </button>
+
+        <!-- Incidents & Alerts -->
+        <button
+          type="button"
+          (click)="onSelectTab('monitoring-incidents')"
+          [ngClass]="getNavClass('monitoring-incidents')"
+          class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all">
+
+          <app-icon name="alert-triangle" [size]="16"></app-icon>
+          <span>Incidents & Alerts</span>
+
+          <span
+            *ngIf="dataService.monitorIncidents().length > 0"
+            class="ml-auto bg-rose-500/20 text-rose-400 border border-rose-500/30 text-[10px] px-2 py-0.5 rounded-full font-bold">
+            {{ dataService.monitorIncidents().length }}
+          </span>
+        </button>
+
+        <!-- Plans & Pricing -->
+        <button
+          type="button"
+          (click)="onSelectTab('monitoring-plans')"
+          [ngClass]="getNavClass('monitoring-plans')"
+          class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all">
+
+          <app-icon name="tag" [size]="16"></app-icon>
+          <span>Plans & Pricing</span>
+        </button>
+
+        <!-- Monitoring Subscriptions -->
+        <button
+          type="button"
+          (click)="onSelectTab('monitoring-subscriptions')"
+          [ngClass]="getNavClass('monitoring-subscriptions')"
+          class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all">
+
+          <app-icon name="users" [size]="16"></app-icon>
+          <span>Subscriptions</span>
+        </button>
+
+        <!-- Monitoring Sources -->
+        <button
+          type="button"
+          (click)="onSelectTab('monitoring-sources')"
+          [ngClass]="getNavClass('monitoring-sources')"
+          class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all">
+
+          <app-icon name="layers" [size]="16"></app-icon>
+          <span>Probe Sources</span>
+        </button>
+
+        <!-- Alert Templates -->
+        <button
+          type="button"
+          (click)="onSelectTab('monitoring-templates')"
+          [ngClass]="getNavClass('monitoring-templates')"
+          class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all">
+
+          <app-icon name="message-square" [size]="16"></app-icon>
+          <span>Alert Templates</span>
         </button>
 
         <!-- DLT REGISTRY SECTION -->

@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DataService } from '../../services/data.service';
@@ -493,7 +493,7 @@ import { IconComponent } from '../shared/icon.component';
     </div>
   `
 })
-export class UsersComponent {
+export class UsersComponent implements OnInit {
   dataService = inject(DataService);
   authService = inject(AuthService);
   Math = Math;
@@ -502,7 +502,7 @@ export class UsersComponent {
   statusFilter = 'ALL';
 
   currentPage = 1;
-  pageSize = 5;
+  pageSize = 10;
 
   selectedHierarchyUser: AlertUser | null = null;
   selectedAssignUser: AlertUser | null = null;
@@ -517,6 +517,10 @@ export class UsersComponent {
   actionError = '';
   isSubmittingBalance = false;
   userLedgerList: SmsLedgerEntry[] = [];
+
+  async ngOnInit() {
+    await this.dataService.fetchLiveUsers();
+  }
 
   filteredUsers() {
     return this.dataService.users().filter(u => {

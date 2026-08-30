@@ -20,6 +20,15 @@ import { SmsPricingComponent } from './components/billing/sms-pricing.component'
 import { BankTransfersComponent } from './components/billing/bank-transfers.component';
 import { BillingDashboardComponent } from './components/billing/billing-dashboard.component';
 
+// Website Monitoring Module (Phase 1)
+import { MonitoringDashboardComponent } from './components/monitoring/monitoring-dashboard.component';
+import { MonitoringAllMonitorsComponent } from './components/monitoring/monitoring-all-monitors.component';
+import { MonitoringIncidentsComponent } from './components/monitoring/monitoring-incidents.component';
+import { MonitoringPlansComponent } from './components/monitoring/monitoring-plans.component';
+import { MonitoringSubscriptionsComponent } from './components/monitoring/monitoring-subscriptions.component';
+import { MonitoringSourcesComponent } from './components/monitoring/monitoring-sources.component';
+import { MonitoringTemplatesComponent } from './components/monitoring/monitoring-templates.component';
+
 import { ToastComponent } from './components/shared/toast.component';
 
 @Component({
@@ -35,6 +44,13 @@ import { ToastComponent } from './components/shared/toast.component';
     SmsPricingComponent,
     BankTransfersComponent,
     BillingDashboardComponent,
+    MonitoringDashboardComponent,
+    MonitoringAllMonitorsComponent,
+    MonitoringIncidentsComponent,
+    MonitoringPlansComponent,
+    MonitoringSubscriptionsComponent,
+    MonitoringSourcesComponent,
+    MonitoringTemplatesComponent,
     DltApprovalsComponent,
     SenderIdsComponent,
     DltTemplatesComponent,
@@ -83,6 +99,17 @@ import { ToastComponent } from './components/shared/toast.component';
             <app-sms-pricing *ngIf="activeTab === 'sms-pricing'"></app-sms-pricing>
             <app-bank-transfers *ngIf="activeTab === 'bank-transfers'"></app-bank-transfers>
             <app-billing-dashboard *ngIf="activeTab === 'billing-dashboard'" (navigate)="onTabChange($event)"></app-billing-dashboard>
+            
+            <!-- Website Monitoring Components -->
+            <app-monitoring-dashboard *ngIf="activeTab === 'monitoring-dashboard'"></app-monitoring-dashboard>
+            <app-monitoring-all-monitors *ngIf="activeTab === 'monitoring-monitors'"></app-monitoring-all-monitors>
+            <app-monitoring-incidents *ngIf="activeTab === 'monitoring-incidents'"></app-monitoring-incidents>
+            <app-monitoring-plans *ngIf="activeTab === 'monitoring-plans'"></app-monitoring-plans>
+            <app-monitoring-subscriptions *ngIf="activeTab === 'monitoring-subscriptions'"></app-monitoring-subscriptions>
+            <app-monitoring-sources *ngIf="activeTab === 'monitoring-sources'"></app-monitoring-sources>
+            <app-monitoring-templates *ngIf="activeTab === 'monitoring-templates'"></app-monitoring-templates>
+
+            <!-- DLT & Gateway Components -->
             <app-dlt-approvals *ngIf="activeTab === 'dlt-pe'"></app-dlt-approvals>
             <app-sender-ids *ngIf="activeTab === 'dlt-sender'"></app-sender-ids>
             <app-dlt-templates *ngIf="activeTab === 'dlt-template'"></app-dlt-templates>
