@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DataService } from '../../services/data.service';
@@ -197,7 +197,7 @@ import { IconComponent } from '../shared/icon.component';
     </div>
   `
 })
-export class DltTemplatesComponent {
+export class DltTemplatesComponent implements OnInit {
   dataService = inject(DataService);
   authService = inject(AuthService);
 
@@ -206,6 +206,10 @@ export class DltTemplatesComponent {
   targetStatus: DltStatus = 'ACTIVE';
   adminRemarks = '';
   isUpdating = false;
+
+  async ngOnInit() {
+    await this.dataService.fetchLiveTemplates();
+  }
 
   get activeCount(): number {
     return this.dataService.contentTemplates().filter(t => t.status === 'ACTIVE').length;

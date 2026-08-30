@@ -316,11 +316,12 @@ export class DataService {
       });
 
       const response = await firstValueFrom(
-        this.http.get<any>('https://app.alert21.in/back/api/admin/dlt/sender-ids', { headers })
+        this.http.get<any>('https://app.alert21.in/back/api/admin/dlt/sender-ids?limit=1000', { headers })
       );
 
-      if (response && response.success && Array.isArray(response.data)) {
-        const mappedSenders: SenderIdHeader[] = response.data.map((item: any) => ({
+      const items = Array.isArray(response?.data?.items) ? response.data.items : (Array.isArray(response?.data) ? response.data : []);
+      if (items.length > 0 || (response && response.success)) {
+        const mappedSenders: SenderIdHeader[] = items.map((item: any) => ({
           id: item._id,
           userId: item.user_id?._id || '',
           userName: item.user_id?.fullName || 'User',
@@ -385,11 +386,12 @@ export class DataService {
       });
 
       const response = await firstValueFrom(
-        this.http.get<any>('https://app.alert21.in/back/api/admin/dlt/templates', { headers })
+        this.http.get<any>('https://app.alert21.in/back/api/admin/dlt/templates?limit=1000', { headers })
       );
 
-      if (response && response.success && Array.isArray(response.data)) {
-        const mappedTemplates: ContentTemplate[] = response.data.map((item: any) => ({
+      const items = Array.isArray(response?.data?.items) ? response.data.items : (Array.isArray(response?.data) ? response.data : []);
+      if (items.length > 0 || (response && response.success)) {
+        const mappedTemplates: ContentTemplate[] = items.map((item: any) => ({
           id: item._id,
           userId: item.user_id?._id || '',
           userName: item.user_id?.fullName || 'User',
@@ -487,11 +489,12 @@ export class DataService {
       });
 
       const response = await firstValueFrom(
-        this.http.get<any>('https://app.alert21.in/back/api/admin/dlt/principal-entities', { headers })
+        this.http.get<any>('https://app.alert21.in/back/api/admin/dlt/principal-entities?limit=1000', { headers })
       );
 
-      if (response && response.success && Array.isArray(response.data)) {
-        const mappedPEs: PrincipalEntity[] = response.data.map((item: any) => ({
+      const items = Array.isArray(response?.data?.items) ? response.data.items : (Array.isArray(response?.data) ? response.data : []);
+      if (items.length > 0 || (response && response.success)) {
+        const mappedPEs: PrincipalEntity[] = items.map((item: any) => ({
           id: item._id,
           userId: item.user_id?._id || '',
           userName: item.user_id?.fullName || 'User',
@@ -861,10 +864,11 @@ export class DataService {
       const token = this.authService.authToken();
       const headers = new HttpHeaders({ 'Authorization': `Bearer ${token}` });
       const response = await firstValueFrom(
-        this.http.get<any>('https://app.alert21.in/back/api/admin/billing/bank-transfers', { headers })
+        this.http.get<any>('https://app.alert21.in/back/api/admin/billing/bank-transfers?limit=1000', { headers })
       );
 
-      if (response && response.success && Array.isArray(response.data)) {
+      const items = Array.isArray(response?.data?.items) ? response.data.items : (Array.isArray(response?.data) ? response.data : []);
+      if (items.length > 0 || (response && response.success)) {
         // Try fetching orders and dashboard recentBankTransfers to resolve order details
         let ordersMap = new Map<string, any>();
         
@@ -884,7 +888,7 @@ export class DataService {
           }
         } catch (e) {}
 
-        const mappedTransfers: BankTransferRequest[] = response.data.map((item: any) => {
+        const mappedTransfers: BankTransferRequest[] = items.map((item: any) => {
           let order = typeof item.order_id === 'object' && item.order_id !== null ? item.order_id : null;
           const orderKey = String(item.order_id || item.orderId || item._id);
           const utrKey = String(item.utr_number || item.utrNumber || '');
@@ -1260,6 +1264,9 @@ export class DataService {
   // 4. Monitoring Subscriptions Signal
   monitoringSubscriptions = signal<MonitoringSubscription[]>([]);
 
+  // 4b. Monitoring Bank Transfer Orders Signal
+  monitoringBankTransfers = signal<any[]>([]);
+
   // 5. Global Website Monitors Signal
   websiteMonitors = signal<WebsiteMonitor[]>([]);
 
@@ -1317,27 +1324,38 @@ export class DataService {
         );
         if (res && (res.success || res.data)) {
           const d = res.data || res;
+          const kpis = d.kpis || d;
+          const monitors = this.websiteMonitors();
+          const activeMonitors = monitors.filter(m => !m.softDeletedAt);
+          const upCount = activeMonitors.filter(m => m.status === 'UP').length;
+          const downCount = activeMonitors.filter(m => m.status === 'DOWN').length;
+          const pausedCount = activeMonitors.filter(m => m.status === 'PAUSED' || m.isPaused).length;
+          const degradedCount = activeMonitors.filter(m => m.status === 'DEGRADED').length;
+          const calculatedAvgLatency = activeMonitors.length 
+            ? Math.round(activeMonitors.reduce((sum, m) => sum + (m.responseTimeMs || 0), 0) / activeMonitors.length) 
+            : 0;
+
           this.monitoringDashboardStats.set({
-            totalActiveMonitors: d.totalActiveMonitors ?? d.total_monitors ?? 0,
-            monitorsUp: d.monitorsUp ?? d.up ?? 0,
-            monitorsDown: d.monitorsDown ?? d.down ?? 0,
-            monitorsPaused: d.monitorsPaused ?? d.paused ?? 0,
-            monitorsDegraded: d.monitorsDegraded ?? d.degraded ?? 0,
-            incidentsToday: d.incidentsToday ?? d.open_incidents ?? 0,
-            avgPlatformLatencyMs: d.avgPlatformLatencyMs ?? d.avg_latency ?? 0,
+            totalActiveMonitors: kpis.total_monitors ?? kpis.totalMonitors ?? (activeMonitors.length || 0),
+            monitorsUp: kpis.monitors_up ?? kpis.monitorsUp ?? (upCount || 0),
+            monitorsDown: kpis.monitors_down ?? kpis.monitorsDown ?? (downCount || 0),
+            monitorsPaused: kpis.monitors_paused ?? kpis.monitorsPaused ?? (pausedCount || 0),
+            monitorsDegraded: kpis.monitors_degraded ?? kpis.monitorsDegraded ?? (degradedCount || 0),
+            incidentsToday: kpis.incidents_today ?? kpis.incidentsToday ?? this.monitorIncidents().filter(i => i.status === 'OPEN').length,
+            avgPlatformLatencyMs: d.avgPlatformLatencyMs ?? d.avg_latency ?? (calculatedAvgLatency || 0),
             alertsSentToday: d.alertsSentToday || {
-              total: d.alerts_total ?? 0,
-              email: d.alerts_email ?? 0,
-              sms: d.alerts_sms ?? 0,
-              whatsapp: d.alerts_whatsapp ?? 0,
-              inApp: d.alerts_inapp ?? 0
+              total: d.alerts_total ?? d.alertsSentToday?.total ?? 0,
+              email: d.alerts_email ?? d.alertsSentToday?.email ?? 0,
+              sms: d.alerts_sms ?? d.alertsSentToday?.sms ?? 0,
+              whatsapp: d.alerts_whatsapp ?? d.alertsSentToday?.whatsapp ?? 0,
+              inApp: d.alerts_inapp ?? d.alertsSentToday?.inApp ?? 0
             },
-            activeSubscriptionsCount: d.activeSubscriptionsCount ?? d.active_subscriptions ?? 0,
+            activeSubscriptionsCount: kpis.active_subscriptions ?? kpis.activeSubscriptionsCount ?? this.monitoringSubscriptions().filter(s => s.status === 'ACTIVE').length,
             mrr: d.mrr ?? 0,
             arr: d.arr ?? (d.mrr ? d.mrr * 12 : 0),
             upcomingRenewalsCount: d.upcomingRenewalsCount ?? 0,
             expiredInGraceCount: d.expiredInGraceCount ?? 0,
-            pendingBankTransfersCount: d.pendingBankTransfersCount ?? 0,
+            pendingBankTransfersCount: kpis.pending_bank_transfers ?? d.pendingBankTransfersCount ?? 0,
             topFailingDomains: Array.isArray(d.topFailingDomains) ? d.topFailingDomains : []
           });
           break;
@@ -1352,8 +1370,8 @@ export class DataService {
   async fetchMonitoringSources() {
     const headers = this.getAuthHeaders();
     const urls = [
-      'https://app.alert21.in/back/api/v1/admin/monitoring/sources',
-      'https://app.alert21.in/back/api/admin/monitoring/sources'
+      'https://app.alert21.in/back/api/v1/admin/monitoring/sources?limit=1000',
+      'https://app.alert21.in/back/api/admin/monitoring/sources?limit=1000'
     ];
 
     for (const url of urls) {
@@ -1361,7 +1379,14 @@ export class DataService {
         const res = await firstValueFrom(
           this.http.get<any>(url, { headers }).pipe(catchError(() => of(null)))
         );
-        const list = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : null);
+        const list = Array.isArray(res?.data?.sources)
+          ? res.data.sources
+          : (Array.isArray(res?.data?.items)
+              ? res.data.items
+              : (Array.isArray(res?.data)
+                  ? res.data
+                  : (Array.isArray(res?.sources) ? res.sources : (Array.isArray(res) ? res : null))));
+
         if (list && Array.isArray(list)) {
           const mapped: MonitoringSource[] = list.map((s: any) => ({
             id: s._id || s.id,
@@ -1381,7 +1406,7 @@ export class DataService {
             successRate: s.success_rate ?? s.successRate ?? 100,
             avgCheckTimeMs: s.avg_check_time_ms ?? s.avgCheckTimeMs ?? 40,
             queueLagMs: s.queue_lag_ms ?? s.queueLagMs ?? 0,
-            createdAt: s.createdAt
+            createdAt: s.createdAt || s.created_at
           }));
           this.monitoringSources.set(mapped);
           break;
@@ -1395,22 +1420,45 @@ export class DataService {
    */
   async createMonitoringSource(source: Partial<MonitoringSource>): Promise<boolean> {
     const headers = this.getAuthHeaders();
+    const src = source as any;
+    const payload: any = {
+      name: source.name || 'Custom Worker',
+      code: (source.code || 'SRC_' + Date.now()).toUpperCase(),
+      type: source.type || 'NATIVE_HTTP',
+      region: source.region || 'India (Mumbai)',
+      purpose: source.purpose || 'PRIMARY',
+      min_interval_seconds: Number(source.minIntervalSeconds ?? src.min_interval_seconds ?? 30),
+      minIntervalSeconds: Number(source.minIntervalSeconds ?? src.min_interval_seconds ?? 30),
+      timeout_seconds: Number(source.timeoutSeconds ?? src.timeout_seconds ?? 10),
+      timeoutSeconds: Number(source.timeoutSeconds ?? src.timeout_seconds ?? 10),
+      max_concurrency: Number(source.maxConcurrency ?? src.max_concurrency ?? 500),
+      maxConcurrency: Number(source.maxConcurrency ?? src.max_concurrency ?? 500),
+      priority: Number(source.priority ?? 1),
+      status: source.status || 'ACTIVE'
+    };
+
     const urls = [
       'https://app.alert21.in/back/api/v1/admin/monitoring/sources',
       'https://app.alert21.in/back/api/admin/monitoring/sources'
     ];
 
+    let lastError = '';
     for (const url of urls) {
       try {
         const res = await firstValueFrom(
-          this.http.post<any>(url, source, { headers }).pipe(catchError(() => of(null)))
+          this.http.post<any>(url, payload, { headers })
         );
         if (res && (res.success || res.data)) {
           await this.fetchMonitoringSources();
           this.toastService.showSuccess('Source Created', 'Monitoring probe worker registered successfully.');
           return true;
         }
-      } catch (e) {}
+      } catch (e: any) {
+        lastError = e?.error?.message || e?.message || lastError;
+      }
+    }
+    if (lastError) {
+      this.toastService.showError('Source Registration Failed', lastError);
     }
     return false;
   }
@@ -1446,8 +1494,8 @@ export class DataService {
   async fetchMonitoringPlans() {
     const headers = this.getAuthHeaders();
     const urls = [
-      'https://app.alert21.in/back/api/v1/admin/monitoring/plans',
-      'https://app.alert21.in/back/api/admin/monitoring/plans'
+      'https://app.alert21.in/back/api/v1/admin/monitoring/plans?limit=1000',
+      'https://app.alert21.in/back/api/admin/monitoring/plans?limit=1000'
     ];
 
     for (const url of urls) {
@@ -1455,7 +1503,14 @@ export class DataService {
         const res = await firstValueFrom(
           this.http.get<any>(url, { headers }).pipe(catchError(() => of(null)))
         );
-        const list = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : null);
+        const list = Array.isArray(res?.data?.plans)
+          ? res.data.plans
+          : (Array.isArray(res?.data?.items)
+              ? res.data.items
+              : (Array.isArray(res?.data)
+                  ? res.data
+                  : (Array.isArray(res?.plans) ? res.plans : (Array.isArray(res) ? res : null))));
+
         if (list && Array.isArray(list)) {
           const mapped: MonitoringPlan[] = list.map((p: any) => ({
             id: p._id || p.id,
@@ -1469,8 +1524,8 @@ export class DataService {
             retentionDays: p.retention_days ?? p.retentionDays ?? 30,
             notificationContacts: p.notification_contacts ?? p.notificationContacts ?? 2,
             emailInApp: p.email_in_app ?? p.emailInApp ?? true,
-            smsMode: p.sms_mode ?? p.smsMode ?? 'WALLET',
-            whatsAppMode: p.whatsapp_mode ?? p.whatsAppMode ?? 'WALLET',
+            smsMode: (p.sms_mode === 'USER_WALLET' || p.sms_mode === 'WALLET') ? 'USER_WALLET' : (p.sms_mode ?? 'USER_WALLET'),
+            whatsAppMode: (p.whatsapp_mode === 'USER_WALLET' || p.whatsapp_mode === 'WALLET') ? 'USER_WALLET' : (p.whatsapp_mode ?? 'USER_WALLET'),
             sslMonitoring: p.ssl_monitoring ?? p.sslMonitoring ?? true,
             slowResponseAlert: p.slow_response_alert ?? p.slowResponseAlert ?? true,
             slowThresholdMs: p.slow_threshold_ms ?? p.slowThresholdMs ?? 3000,
@@ -1482,7 +1537,7 @@ export class DataService {
             sortOrder: p.sort_order ?? p.sortOrder ?? 0,
             badge: p.badge,
             status: p.status || 'ACTIVE',
-            createdAt: p.createdAt
+            createdAt: p.createdAt || p.created_at
           }));
           this.monitoringPlans.set(mapped);
           break;
@@ -1496,22 +1551,86 @@ export class DataService {
    */
   async createMonitoringPlan(plan: Partial<MonitoringPlan>): Promise<boolean> {
     const headers = this.getAuthHeaders();
+    const p = plan as any;
+    const monthlyPrice = Number(plan.monthlyPrice ?? p.monthly_price ?? 0);
+    const annualPrice = Number(plan.annualPrice ?? p.annual_price ?? 0);
+    const includedMonitors = Number(plan.includedMonitors ?? p.included_monitors ?? 1);
+    const checkInterval = Number(plan.checkIntervalSeconds ?? p.check_interval_seconds ?? 60);
+    const retention = Number(plan.retentionDays ?? p.retention_days ?? 30);
+    const contacts = Number(plan.notificationContacts ?? p.notification_contacts ?? 2);
+
+    const resolveMode = (val?: string) => {
+      if (!val) return 'USER_WALLET';
+      if (val === 'WALLET') return 'USER_WALLET';
+      return val;
+    };
+
+    const payload: any = {
+      code: plan.code || 'PLAN_' + Date.now(),
+      name: plan.name || 'New Tier',
+      monthly_price: monthlyPrice,
+      annual_price: annualPrice,
+      monthlyPrice: monthlyPrice,
+      annualPrice: annualPrice,
+      gst_percent: plan.gstPercent ?? p.gst_percent ?? 18,
+      gstPercent: plan.gstPercent ?? p.gst_percent ?? 18,
+      included_monitors: includedMonitors,
+      includedMonitors: includedMonitors,
+      check_interval_seconds: checkInterval,
+      checkIntervalSeconds: checkInterval,
+      retention_days: retention,
+      retentionDays: retention,
+      notification_contacts: contacts,
+      notificationContacts: contacts,
+      email_in_app: plan.emailInApp ?? p.email_in_app ?? true,
+      emailInApp: plan.emailInApp ?? p.email_in_app ?? true,
+      sms_mode: resolveMode(plan.smsMode ?? p.sms_mode),
+      smsMode: resolveMode(plan.smsMode ?? p.sms_mode),
+      whatsapp_mode: resolveMode(plan.whatsAppMode ?? p.whatsapp_mode),
+      whatsAppMode: resolveMode(plan.whatsAppMode ?? p.whatsapp_mode),
+      ssl_monitoring: plan.sslMonitoring ?? p.ssl_monitoring ?? true,
+      sslMonitoring: plan.sslMonitoring ?? p.ssl_monitoring ?? true,
+      slow_response_alert: plan.slowResponseAlert ?? p.slow_response_alert ?? true,
+      slowResponseAlert: plan.slowResponseAlert ?? p.slow_response_alert ?? true,
+      slow_threshold_ms: plan.slowThresholdMs ?? p.slow_threshold_ms ?? 3000,
+      slowThresholdMs: plan.slowThresholdMs ?? p.slow_threshold_ms ?? 3000,
+      verification_sources: plan.verificationSources ?? p.verification_sources ?? 1,
+      verificationSources: plan.verificationSources ?? p.verification_sources ?? 1,
+      webhooks_status_page: plan.webhooksStatusPage ?? p.webhooks_status_page ?? false,
+      webhooksStatusPage: plan.webhooksStatusPage ?? p.webhooks_status_page ?? false,
+      add_on_eligibility: plan.addOnEligibility ?? p.add_on_eligibility ?? [],
+      addOnEligibility: plan.addOnEligibility ?? p.add_on_eligibility ?? [],
+      grace_period_days: plan.gracePeriodDays ?? p.grace_period_days ?? 3,
+      gracePeriodDays: plan.gracePeriodDays ?? p.grace_period_days ?? 3,
+      visibility: plan.visibility || 'PUBLIC',
+      sort_order: Number(plan.sortOrder ?? p.sort_order ?? 0),
+      sortOrder: Number(plan.sortOrder ?? p.sort_order ?? 0),
+      badge: plan.badge,
+      status: plan.status || 'ACTIVE'
+    };
+
     const urls = [
       'https://app.alert21.in/back/api/v1/admin/monitoring/plans',
       'https://app.alert21.in/back/api/admin/monitoring/plans'
     ];
 
+    let lastError = '';
     for (const url of urls) {
       try {
         const res = await firstValueFrom(
-          this.http.post<any>(url, plan, { headers }).pipe(catchError(() => of(null)))
+          this.http.post<any>(url, payload, { headers })
         );
         if (res && (res.success || res.data)) {
           await this.fetchMonitoringPlans();
           this.toastService.showSuccess('Plan Created', 'Monitoring plan registered successfully.');
           return true;
         }
-      } catch (e) {}
+      } catch (e: any) {
+        lastError = e?.error?.message || e?.message || lastError;
+      }
+    }
+    if (lastError) {
+      this.toastService.showError('Plan Creation Failed', lastError);
     }
     return false;
   }
@@ -1521,22 +1640,51 @@ export class DataService {
    */
   async updateMonitoringPlan(id: string, updates: Partial<MonitoringPlan>): Promise<boolean> {
     const headers = this.getAuthHeaders();
+    const resolveMode = (val?: string) => {
+      if (!val) return 'USER_WALLET';
+      if (val === 'WALLET') return 'USER_WALLET';
+      return val;
+    };
+    const payload: any = { ...updates };
+    if (updates.monthlyPrice !== undefined) payload.monthly_price = Number(updates.monthlyPrice);
+    if (updates.annualPrice !== undefined) payload.annual_price = Number(updates.annualPrice);
+    if (updates.includedMonitors !== undefined) payload.included_monitors = Number(updates.includedMonitors);
+    if (updates.checkIntervalSeconds !== undefined) payload.check_interval_seconds = Number(updates.checkIntervalSeconds);
+    if (updates.retentionDays !== undefined) payload.retention_days = Number(updates.retentionDays);
+    if (updates.notificationContacts !== undefined) payload.notification_contacts = Number(updates.notificationContacts);
+    if (updates.smsMode !== undefined) payload.sms_mode = resolveMode(updates.smsMode);
+    if (updates.whatsAppMode !== undefined) payload.whatsapp_mode = resolveMode(updates.whatsAppMode);
+    if (updates.sslMonitoring !== undefined) payload.ssl_monitoring = updates.sslMonitoring;
+    if (updates.slowResponseAlert !== undefined) payload.slow_response_alert = updates.slowResponseAlert;
+    if (updates.slowThresholdMs !== undefined) payload.slow_threshold_ms = Number(updates.slowThresholdMs);
+    if (updates.verificationSources !== undefined) payload.verification_sources = Number(updates.verificationSources);
+    if (updates.webhooksStatusPage !== undefined) payload.webhooks_status_page = updates.webhooksStatusPage;
+    if (updates.addOnEligibility !== undefined) payload.add_on_eligibility = updates.addOnEligibility;
+    if (updates.gracePeriodDays !== undefined) payload.grace_period_days = Number(updates.gracePeriodDays);
+    if (updates.sortOrder !== undefined) payload.sort_order = Number(updates.sortOrder);
+
     const urls = [
       `https://app.alert21.in/back/api/v1/admin/monitoring/plans/${id}`,
       `https://app.alert21.in/back/api/admin/monitoring/plans/${id}`
     ];
 
+    let lastError = '';
     for (const url of urls) {
       try {
         const res = await firstValueFrom(
-          this.http.put<any>(url, updates, { headers }).pipe(catchError(() => of(null)))
+          this.http.patch<any>(url, payload, { headers })
         );
         if (res && (res.success || res.data)) {
           await this.fetchMonitoringPlans();
           this.toastService.showSuccess('Plan Updated', 'Monitoring plan updated successfully.');
           return true;
         }
-      } catch (e) {}
+      } catch (e: any) {
+        lastError = e?.error?.message || e?.message || lastError;
+      }
+    }
+    if (lastError) {
+      this.toastService.showError('Plan Update Failed', lastError);
     }
     return false;
   }
@@ -1572,8 +1720,8 @@ export class DataService {
   async fetchMonitoringAddons() {
     const headers = this.getAuthHeaders();
     const urls = [
-      'https://app.alert21.in/back/api/v1/admin/monitoring/addons',
-      'https://app.alert21.in/back/api/admin/monitoring/addons'
+      'https://app.alert21.in/back/api/v1/admin/monitoring/addons?limit=1000',
+      'https://app.alert21.in/back/api/admin/monitoring/addons?limit=1000'
     ];
 
     for (const url of urls) {
@@ -1581,7 +1729,14 @@ export class DataService {
         const res = await firstValueFrom(
           this.http.get<any>(url, { headers }).pipe(catchError(() => of(null)))
         );
-        const list = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : null);
+        const list = Array.isArray(res?.data?.addons)
+          ? res.data.addons
+          : (Array.isArray(res?.data?.items)
+              ? res.data.items
+              : (Array.isArray(res?.data)
+                  ? res.data
+                  : (Array.isArray(res?.addons) ? res.addons : (Array.isArray(res) ? res : null))));
+
         if (list && Array.isArray(list)) {
           const mapped: MonitoringAddon[] = list.map((a: any) => ({
             id: a._id || a.id,
@@ -1607,8 +1762,8 @@ export class DataService {
   async fetchMonitoringSubscriptions() {
     const headers = this.getAuthHeaders();
     const urls = [
-      'https://app.alert21.in/back/api/v1/admin/monitoring/subscriptions',
-      'https://app.alert21.in/back/api/admin/monitoring/subscriptions'
+      'https://app.alert21.in/back/api/v1/admin/monitoring/subscriptions?limit=1000',
+      'https://app.alert21.in/back/api/admin/monitoring/subscriptions?limit=1000'
     ];
 
     for (const url of urls) {
@@ -1616,41 +1771,177 @@ export class DataService {
         const res = await firstValueFrom(
           this.http.get<any>(url, { headers }).pipe(catchError(() => of(null)))
         );
-        const list = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : null);
+        const list = Array.isArray(res?.data?.subscriptions)
+          ? res.data.subscriptions
+          : (Array.isArray(res?.data?.items)
+              ? res.data.items
+              : (Array.isArray(res?.data)
+                  ? res.data
+                  : (Array.isArray(res?.subscriptions) ? res.subscriptions : (Array.isArray(res) ? res : null))));
+
         if (list && Array.isArray(list)) {
-          const mapped: MonitoringSubscription[] = list.map((s: any) => ({
-            id: s._id || s.id,
-            userId: s.user_id?._id || s.user_id || s.userId,
-            userName: s.user_id?.fullName || s.user_id?.name || s.userName || 'User',
-            userEmail: s.user_id?.email || s.userEmail || '',
-            companyName: s.user_id?.companyName || s.companyName || '',
-            planId: s.plan_id?._id || s.plan_id || s.planId,
-            planCode: s.plan_id?.code || s.planCode || 'STARTER',
-            planName: s.plan_id?.name || s.planName || 'Plan',
-            billingCycle: s.billing_cycle || s.billingCycle || 'MONTHLY',
-            status: s.status || 'ACTIVE',
-            currentMonitorsCount: s.current_monitors_count ?? s.currentMonitorsCount ?? 0,
-            maxMonitorsQuota: s.max_monitors_quota ?? s.maxMonitorsQuota ?? 5,
-            currentContactsCount: s.current_contacts_count ?? s.currentContactsCount ?? 0,
-            maxContactsQuota: s.max_contacts_quota ?? s.maxContactsQuota ?? 2,
-            startDate: s.start_date || s.startDate || s.createdAt,
-            endDate: s.end_date || s.endDate,
-            graceEndDate: s.grace_end_date || s.graceEndDate,
-            renewalDate: s.renewal_date || s.renewalDate || s.end_date,
-            autoRenew: s.auto_renew ?? s.autoRenew ?? true,
-            monthlyAmount: s.monthly_amount ?? s.monthlyAmount ?? 0,
-            annualAmount: s.annual_amount ?? s.annualAmount ?? 0,
-            paidAmount: s.paid_amount ?? s.paidAmount ?? 0,
-            smsWalletBalance: s.sms_wallet_balance ?? s.smsWalletBalance ?? 0,
-            whatsAppWalletBalance: s.whatsapp_wallet_balance ?? s.whatsAppWalletBalance ?? 0,
-            adminNotes: s.admin_notes || s.adminNotes,
-            createdAt: s.createdAt
-          }));
+          const allMonitors = this.websiteMonitors();
+          const mapped: MonitoringSubscription[] = list.map((s: any) => {
+            const uId = typeof s.user_id === 'object' && s.user_id ? (s.user_id._id || s.user_id.id) : (s.user_id || s.userId);
+            const userLiveMonitors = allMonitors.filter(m => String(m.userId) === String(uId) && !m.softDeletedAt);
+            const maxMonitors = s.entitlement_snapshot?.max_monitors ?? s.max_monitors_quota ?? s.plan_id?.included_monitors ?? s.maxMonitorsQuota ?? 5;
+            const maxContacts = s.entitlement_snapshot?.max_contacts ?? s.max_contacts_quota ?? s.plan_id?.notification_contacts ?? s.maxContactsQuota ?? 2;
+            const monitorsCount = s.current_monitors_count ?? (userLiveMonitors.length || 0);
+            const planMonthly = s.plan_id?.monthly_price ?? s.monthly_amount ?? (s.plan_code === 'BASIC' || s.plan_id?.code === 'BASIC' ? 299 : 0);
+            const planAnnual = s.plan_id?.annual_price ?? s.annual_amount ?? (s.plan_code === 'BASIC' || s.plan_id?.code === 'BASIC' ? 2999 : 0);
+            const basePrice = s.billing_cycle === 'ANNUAL' ? planAnnual : planMonthly;
+            const gstRate = s.plan_id?.gst_percent ?? 18;
+            const calculatedTotal = basePrice > 0 ? Number((basePrice + (basePrice * gstRate / 100)).toFixed(2)) : 0;
+            const paidAmt = s.paid_amount ?? s.paidAmount ?? (calculatedTotal > 0 ? calculatedTotal : (basePrice > 0 ? basePrice : 0));
+
+            return {
+              id: s._id || s.id,
+              userId: uId,
+              userName: typeof s.user_id === 'object' && s.user_id ? (s.user_id.fullName || s.user_id.name || 'User') : (s.userName || 'User'),
+              userEmail: typeof s.user_id === 'object' && s.user_id ? (s.user_id.email || '') : (s.userEmail || ''),
+              companyName: typeof s.user_id === 'object' && s.user_id ? (s.user_id.companyName || '') : (s.companyName || ''),
+              planId: typeof s.plan_id === 'object' && s.plan_id ? (s.plan_id._id || s.plan_id.id) : (s.plan_id || s.planId),
+              planCode: typeof s.plan_id === 'object' && s.plan_id ? (s.plan_id.code || 'FREE') : (s.plan_code || s.planCode || 'FREE'),
+              planName: typeof s.plan_id === 'object' && s.plan_id ? (s.plan_id.name || 'Plan') : (s.planName || 'Free Plan'),
+              billingCycle: s.billing_cycle || s.billingCycle || 'FREE',
+              status: s.status || 'ACTIVE',
+              currentMonitorsCount: monitorsCount,
+              maxMonitorsQuota: maxMonitors,
+              currentContactsCount: s.current_contacts_count ?? s.currentContactsCount ?? 0,
+              maxContactsQuota: maxContacts,
+              startDate: s.starts_at || s.start_date || s.startDate || s.createdAt,
+              endDate: s.expires_at || s.end_date || s.endDate,
+              graceEndDate: s.grace_ends_at || s.grace_end_date || s.graceEndDate,
+              renewalDate: s.expires_at || s.renewal_date || s.renewalDate || s.end_date,
+              autoRenew: s.auto_renew ?? s.autoRenew ?? true,
+              monthlyAmount: planMonthly,
+              annualAmount: planAnnual,
+              paidAmount: paidAmt,
+              smsWalletBalance: s.sms_wallet_balance ?? s.smsWalletBalance ?? 0,
+              whatsAppWalletBalance: s.whatsapp_wallet_balance ?? s.whatsAppWalletBalance ?? 0,
+              adminNotes: s.admin_notes || s.adminNotes,
+              createdAt: s.createdAt || s.created_at
+            };
+          });
           this.monitoringSubscriptions.set(mapped);
           break;
         }
       } catch (e) {}
     }
+  }
+
+  /**
+   * GET /api/v1/admin/monitoring/bank-transfers
+   */
+  async fetchMonitoringBankTransfers() {
+    const headers = this.getAuthHeaders();
+    const urls = [
+      'https://app.alert21.in/back/api/v1/admin/monitoring/bank-transfers',
+      'https://app.alert21.in/back/api/admin/monitoring/bank-transfers'
+    ];
+
+    for (const url of urls) {
+      try {
+        const res = await firstValueFrom(
+          this.http.get<any>(`${url}?limit=1000`, { headers }).pipe(catchError(() => of(null)))
+        );
+        if (res && (res.success || res.data)) {
+          const list = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.items) ? res.data.items : (Array.isArray(res.data?.orders) ? res.data.orders : []));
+          const mapped = list.map((item: any) => ({
+            id: item._id || item.id,
+            orderNumber: item.order_number || item.orderNumber || 'MON-ORD-000',
+            userId: item.user_id?._id || item.user_id || '',
+            userName: item.user_id?.fullName || item.userName || 'User',
+            userEmail: item.user_id?.email || item.userEmail || '',
+            userMobile: item.user_id?.mobileNumber || item.userMobile || '',
+            companyName: item.user_id?.companyName || item.companyName || '',
+            planName: item.plan_id?.name || item.planName || 'Monitoring Plan',
+            planCode: item.plan_id?.code || item.planCode || '',
+            billingCycle: item.billing_cycle || item.billingCycle || 'MONTHLY',
+            baseAmount: item.base_amount || item.baseAmount || 0,
+            taxableAmount: item.taxable_amount || item.taxableAmount || 0,
+            gstRate: item.gst_rate || item.gstRate || 18,
+            gstAmount: item.gst_amount || item.gstAmount || 0,
+            totalPayable: item.total_payable || item.totalPayable || 0,
+            paymentMethod: item.payment_method || 'BANK_TRANSFER',
+            paymentStatus: item.payment_status || 'PENDING',
+            utrNumber: item.bank_transfer_details?.utr_number || item.utr_number || item.utrNumber || 'N/A',
+            bankName: item.bank_transfer_details?.bank_name || item.bank_name || '',
+            paymentDate: item.bank_transfer_details?.payment_date || item.payment_date || item.created_at || new Date().toISOString(),
+            paymentProof: item.bank_transfer_details?.proof_file_url || item.proof_file_url || '',
+            adminStatus: item.bank_transfer_details?.admin_status || (item.payment_status === 'PAID' ? 'APPROVED' : (item.payment_status === 'FAILED' ? 'REJECTED' : 'PENDING')),
+            adminRemarks: item.bank_transfer_details?.admin_remarks || item.admin_remarks || '',
+            createdAt: item.created_at || item.createdAt || new Date().toISOString()
+          }));
+          this.monitoringBankTransfers.set(mapped);
+          break;
+        }
+      } catch (e) {}
+    }
+  }
+
+  /**
+   * POST /api/v1/admin/monitoring/bank-transfer/:id/approve
+   */
+  async approveMonitoringBankTransfer(id: string, remarks: string = 'Approved by Admin'): Promise<boolean> {
+    const headers = this.getAuthHeaders();
+    const urls = [
+      `https://app.alert21.in/back/api/v1/admin/monitoring/bank-transfer/${id}/approve`,
+      `https://app.alert21.in/back/api/admin/monitoring/bank-transfer/${id}/approve`
+    ];
+
+    let lastError = '';
+    for (const url of urls) {
+      try {
+        const res = await firstValueFrom(
+          this.http.post<any>(url, { remarks }, { headers })
+        );
+        if (res && (res.success || res.message)) {
+          await this.fetchMonitoringBankTransfers();
+          await this.fetchMonitoringSubscriptions();
+          await this.fetchMonitoringDashboard();
+          this.toastService.showSuccess('Transfer Approved', 'Website monitoring subscription activated.');
+          return true;
+        }
+      } catch (e: any) {
+        lastError = e?.error?.message || e?.message || lastError;
+      }
+    }
+    if (lastError) {
+      this.toastService.showError('Approval Failed', lastError);
+    }
+    return false;
+  }
+
+  /**
+   * POST /api/v1/admin/monitoring/bank-transfer/:id/reject
+   */
+  async rejectMonitoringBankTransfer(id: string, reason: string): Promise<boolean> {
+    const headers = this.getAuthHeaders();
+    const urls = [
+      `https://app.alert21.in/back/api/v1/admin/monitoring/bank-transfer/${id}/reject`,
+      `https://app.alert21.in/back/api/admin/monitoring/bank-transfer/${id}/reject`
+    ];
+
+    let lastError = '';
+    for (const url of urls) {
+      try {
+        const res = await firstValueFrom(
+          this.http.post<any>(url, { reason }, { headers })
+        );
+        if (res && (res.success || res.message)) {
+          await this.fetchMonitoringBankTransfers();
+          this.toastService.showSuccess('Transfer Rejected', 'Website monitoring order rejected.');
+          return true;
+        }
+      } catch (e: any) {
+        lastError = e?.error?.message || e?.message || lastError;
+      }
+    }
+    if (lastError) {
+      this.toastService.showError('Rejection Failed', lastError);
+    }
+    return false;
   }
 
   /**
@@ -1711,8 +2002,8 @@ export class DataService {
   async fetchGlobalMonitors() {
     const headers = this.getAuthHeaders();
     const urls = [
-      'https://app.alert21.in/back/api/v1/admin/monitoring/monitors',
-      'https://app.alert21.in/back/api/admin/monitoring/monitors'
+      'https://app.alert21.in/back/api/v1/admin/monitoring/monitors?limit=1000',
+      'https://app.alert21.in/back/api/admin/monitoring/monitors?limit=1000'
     ];
 
     for (const url of urls) {
@@ -1720,36 +2011,63 @@ export class DataService {
         const res = await firstValueFrom(
           this.http.get<any>(url, { headers }).pipe(catchError(() => of(null)))
         );
-        const list = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : null);
+        const list = Array.isArray(res?.data?.monitors)
+          ? res.data.monitors
+          : (Array.isArray(res?.data?.items)
+              ? res.data.items
+              : (Array.isArray(res?.data)
+                  ? res.data
+                  : (Array.isArray(res?.monitors) ? res.monitors : (Array.isArray(res) ? res : null))));
+
         if (list && Array.isArray(list)) {
           const mapped: WebsiteMonitor[] = list.map((m: any) => ({
             id: m._id || m.id,
-            userId: m.user_id?._id || m.user_id || m.userId,
-            userName: m.user_id?.fullName || m.userName || 'User',
-            userEmail: m.user_id?.email || m.userEmail || '',
-            name: m.name,
-            url: m.url,
+            userId: typeof m.user_id === 'object' && m.user_id ? (m.user_id._id || m.user_id.id) : (m.user_id || m.userId || ''),
+            userName: typeof m.user_id === 'object' && m.user_id ? (m.user_id.fullName || m.user_id.name || 'User') : (m.userName || 'User'),
+            userEmail: typeof m.user_id === 'object' && m.user_id ? (m.user_id.email || '') : (m.userEmail || ''),
+            name: m.name || 'Website Monitor',
+            url: m.url || '',
             status: m.status || 'UP',
-            intervalSeconds: m.interval_seconds ?? m.intervalSeconds ?? 60,
-            timeoutSeconds: m.timeout_seconds ?? m.timeoutSeconds ?? 10,
-            thresholdMs: m.threshold_ms ?? m.thresholdMs ?? 3000,
-            sslEnabled: m.ssl_enabled ?? m.sslEnabled ?? true,
-            sslValid: m.ssl_valid ?? m.sslValid ?? true,
-            sslDaysRemaining: m.ssl_days_remaining ?? m.sslDaysRemaining ?? 0,
-            sslExpiresAt: m.ssl_expires_at || m.sslExpiresAt,
-            lastCheckAt: m.last_check_at || m.lastCheckAt || m.updatedAt,
+            intervalSeconds: m.interval_sec ?? m.interval_seconds ?? m.intervalSeconds ?? 60,
+            timeoutSeconds: m.timeout_sec ?? m.timeout_seconds ?? m.timeoutSeconds ?? 10,
+            thresholdMs: m.slow_threshold_ms ?? m.threshold_ms ?? m.thresholdMs ?? 3000,
+            sslEnabled: m.ssl_enabled ?? m.sslEnabled ?? false,
+            sslValid: m.ssl_info?.valid ?? m.ssl_valid ?? m.sslValid ?? true,
+            sslDaysRemaining: m.ssl_info?.days_remaining ?? m.ssl_days_remaining ?? m.sslDaysRemaining ?? 0,
+            sslExpiresAt: m.ssl_info?.expires_at || m.ssl_expires_at || m.sslExpiresAt,
+            lastCheckAt: m.last_check_at || m.lastCheckAt || m.updated_at || m.updatedAt,
             nextCheckAt: m.next_check_at || m.nextCheckAt,
-            responseTimeMs: m.response_time_ms ?? m.responseTimeMs ?? 0,
-            uptime30d: m.uptime_30d ?? m.uptime30d ?? 100,
-            httpStatusCode: m.http_status_code ?? m.httpStatusCode,
+            responseTimeMs: m.last_response_time_ms ?? m.response_time_ms ?? m.responseTimeMs ?? 0,
+            uptime30d: m.uptime_stats?.uptime_30d ?? m.uptime_30d ?? m.uptime30d ?? 100,
+            httpStatusCode: m.last_http_status ?? m.http_status_code ?? m.httpStatusCode ?? 200,
             lastErrorCode: m.last_error_code ?? m.lastErrorCode,
             lastIncidentAt: m.last_incident_at || m.lastIncidentAt,
             sourceCode: m.source_code || m.sourceCode || 'A21_NATIVE_PRIMARY',
-            isPaused: m.is_paused ?? m.isPaused ?? false,
-            softDeletedAt: m.soft_deleted_at || m.softDeletedAt,
-            createdAt: m.createdAt || new Date().toISOString()
+            isPaused: m.status === 'PAUSED' || m.is_paused || m.isPaused || false,
+            softDeletedAt: m.deleted_at || m.soft_deleted_at || m.softDeletedAt,
+            createdAt: m.created_at || m.createdAt || new Date().toISOString()
           }));
           this.websiteMonitors.set(mapped);
+          
+          // Re-calculate dashboard metrics with real loaded monitors
+          const activeMonitors = mapped.filter(m => !m.softDeletedAt);
+          const upCount = activeMonitors.filter(m => m.status === 'UP').length;
+          const downCount = activeMonitors.filter(m => m.status === 'DOWN').length;
+          const pausedCount = activeMonitors.filter(m => m.status === 'PAUSED' || m.isPaused).length;
+          const degradedCount = activeMonitors.filter(m => m.status === 'DEGRADED').length;
+          const calculatedAvgLatency = activeMonitors.length 
+            ? Math.round(activeMonitors.reduce((sum, m) => sum + (m.responseTimeMs || 0), 0) / activeMonitors.length) 
+            : 0;
+
+          this.monitoringDashboardStats.update(stats => ({
+            ...stats,
+            totalActiveMonitors: stats.totalActiveMonitors || activeMonitors.length,
+            monitorsUp: stats.monitorsUp || upCount,
+            monitorsDown: stats.monitorsDown || downCount,
+            monitorsPaused: stats.monitorsPaused || pausedCount,
+            monitorsDegraded: stats.monitorsDegraded || degradedCount,
+            avgPlatformLatencyMs: stats.avgPlatformLatencyMs || calculatedAvgLatency
+          }));
           break;
         }
       } catch (e) {}
@@ -1812,8 +2130,8 @@ export class DataService {
   async fetchGlobalIncidents() {
     const headers = this.getAuthHeaders();
     const urls = [
-      'https://app.alert21.in/back/api/v1/admin/monitoring/incidents',
-      'https://app.alert21.in/back/api/admin/monitoring/incidents'
+      'https://app.alert21.in/back/api/v1/admin/monitoring/incidents?limit=1000',
+      'https://app.alert21.in/back/api/admin/monitoring/incidents?limit=1000'
     ];
 
     for (const url of urls) {
@@ -1821,16 +2139,23 @@ export class DataService {
         const res = await firstValueFrom(
           this.http.get<any>(url, { headers }).pipe(catchError(() => of(null)))
         );
-        const list = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : null);
+        const list = Array.isArray(res?.data?.incidents)
+          ? res.data.incidents
+          : (Array.isArray(res?.data?.items)
+              ? res.data.items
+              : (Array.isArray(res?.data)
+                  ? res.data
+                  : (Array.isArray(res?.incidents) ? res.incidents : (Array.isArray(res) ? res : null))));
+
         if (list && Array.isArray(list)) {
           const mapped: MonitorIncident[] = list.map((i: any) => ({
             id: i._id || i.id,
-            monitorId: i.monitor_id?._id || i.monitor_id || i.monitorId,
-            monitorName: i.monitor_id?.name || i.monitorName || 'Target Monitor',
-            monitorUrl: i.monitor_id?.url || i.monitorUrl || '',
-            userId: i.user_id?._id || i.user_id || i.userId,
-            userName: i.user_id?.fullName || i.userName || 'User',
-            userEmail: i.user_id?.email || i.userEmail || '',
+            monitorId: typeof i.monitor_id === 'object' && i.monitor_id ? (i.monitor_id._id || i.monitor_id.id) : (i.monitor_id || i.monitorId),
+            monitorName: typeof i.monitor_id === 'object' && i.monitor_id ? (i.monitor_id.name || 'Target Monitor') : (i.monitorName || 'Target Monitor'),
+            monitorUrl: typeof i.monitor_id === 'object' && i.monitor_id ? (i.monitor_id.url || '') : (i.monitorUrl || ''),
+            userId: typeof i.user_id === 'object' && i.user_id ? (i.user_id._id || i.user_id.id) : (i.user_id || i.userId),
+            userName: typeof i.user_id === 'object' && i.user_id ? (i.user_id.fullName || i.user_id.name || 'User') : (i.userName || 'User'),
+            userEmail: typeof i.user_id === 'object' && i.user_id ? (i.user_id.email || '') : (i.userEmail || ''),
             startedAt: i.started_at || i.startedAt || i.createdAt,
             resolvedAt: i.resolved_at || i.resolvedAt,
             durationSeconds: i.duration_seconds ?? i.durationSeconds ?? 0,
@@ -1881,8 +2206,8 @@ export class DataService {
   async fetchMonitoringTemplates() {
     const headers = this.getAuthHeaders();
     const urls = [
-      'https://app.alert21.in/back/api/v1/admin/monitoring/templates',
-      'https://app.alert21.in/back/api/admin/monitoring/templates'
+      'https://app.alert21.in/back/api/v1/admin/monitoring/templates?limit=1000',
+      'https://app.alert21.in/back/api/admin/monitoring/templates?limit=1000'
     ];
 
     for (const url of urls) {
@@ -1890,7 +2215,14 @@ export class DataService {
         const res = await firstValueFrom(
           this.http.get<any>(url, { headers }).pipe(catchError(() => of(null)))
         );
-        const list = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : null);
+        const list = Array.isArray(res?.data?.templates)
+          ? res.data.templates
+          : (Array.isArray(res?.data?.items)
+              ? res.data.items
+              : (Array.isArray(res?.data)
+                  ? res.data
+                  : (Array.isArray(res?.templates) ? res.templates : (Array.isArray(res) ? res : null))));
+
         if (list && Array.isArray(list)) {
           const mapped: MonitoringTemplate[] = list.map((t: any) => ({
             id: t._id || t.id,
@@ -1907,7 +2239,7 @@ export class DataService {
             variablesCount: t.variables_count ?? t.variablesCount ?? 2,
             variableMapping: t.variable_mapping || t.variableMapping,
             category: t.category || 'Utility',
-            updatedAt: t.updatedAt
+            updatedAt: t.updatedAt || t.updated_at
           }));
           this.monitoringTemplates.set(mapped);
           break;
@@ -1921,22 +2253,51 @@ export class DataService {
    */
   async saveMonitoringTemplate(template: Partial<MonitoringTemplate>): Promise<boolean> {
     const headers = this.getAuthHeaders();
+    const t = template as any;
+    const payload: any = {
+      event_type: template.eventType || t.event_type || 'DOWN',
+      eventType: template.eventType || t.event_type || 'DOWN',
+      channel: template.channel || 'SMS',
+      template_code: template.templateCode || t.template_code,
+      templateCode: template.templateCode || t.template_code,
+      name: template.name,
+      body: template.body,
+      subject: template.subject,
+      dlt_template_id: template.dltTemplateId || t.dlt_template_id,
+      dltTemplateId: template.dltTemplateId || t.dlt_template_id,
+      meta_template_name: template.metaTemplateName || t.meta_template_name,
+      metaTemplateName: template.metaTemplateName || t.meta_template_name,
+      language: template.language || 'en',
+      status: template.status || 'APPROVED',
+      variables_count: Number(template.variablesCount ?? t.variables_count ?? 2),
+      variablesCount: Number(template.variablesCount ?? t.variables_count ?? 2),
+      variable_mapping: template.variableMapping || t.variable_mapping,
+      variableMapping: template.variableMapping || t.variable_mapping,
+      category: template.category || 'Utility'
+    };
+
     const urls = [
       'https://app.alert21.in/back/api/v1/admin/monitoring/templates',
       'https://app.alert21.in/back/api/admin/monitoring/templates'
     ];
 
+    let lastError = '';
     for (const url of urls) {
       try {
         const res = await firstValueFrom(
-          this.http.post<any>(url, template, { headers }).pipe(catchError(() => of(null)))
+          this.http.post<any>(url, payload, { headers })
         );
         if (res && (res.success || res.data)) {
           await this.fetchMonitoringTemplates();
           this.toastService.showSuccess('Template Saved', 'Monitoring template saved successfully.');
           return true;
         }
-      } catch (e) {}
+      } catch (e: any) {
+        lastError = e?.error?.message || e?.message || lastError;
+      }
+    }
+    if (lastError) {
+      this.toastService.showError('Template Save Failed', lastError);
     }
     return false;
   }

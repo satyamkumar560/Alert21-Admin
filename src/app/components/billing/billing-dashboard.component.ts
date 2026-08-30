@@ -221,17 +221,22 @@ export class BillingDashboardComponent implements OnInit {
     this.dataService.fetchBillingDashboardStats();
     this.dataService.fetchLivePricingSlabs();
     this.dataService.fetchLiveBankTransfers();
+    this.dataService.fetchMonitoringBankTransfers();
   }
 
   stats() {
     const live = this.dataService.billingStats();
     const allUsers = this.dataService.users();
     const allTransfers = this.dataService.bankTransfers();
-    const approved = allTransfers.filter(t => t.purchaseStatus === 'APPROVED');
-    const pending = allTransfers.filter(t => t.purchaseStatus === 'PENDING');
+    const allMonTransfers = this.dataService.monitoringBankTransfers();
 
-    const pendingCount = pending.length;
-    const pendingAmt = pending.reduce((sum, t) => sum + (t.totalAmount || 0), 0);
+    const approved = allTransfers.filter(t => t.purchaseStatus === 'APPROVED');
+    const pendingSms = allTransfers.filter(t => t.purchaseStatus === 'PENDING');
+    const pendingMon = allMonTransfers.filter(t => t.adminStatus === 'PENDING');
+
+    const pendingCount = pendingSms.length + pendingMon.length;
+    const pendingAmt = pendingSms.reduce((sum, t) => sum + (t.totalAmount || 0), 0) + 
+                       pendingMon.reduce((sum, t) => sum + (t.totalPayable || 0), 0);
 
     const totalSold = approved.reduce((sum, t) => sum + (t.smsQuantity || 0), 0);
     const totalBilling = approved.reduce((sum, t) => sum + (t.baseAmount || 0), 0);
@@ -242,8 +247,8 @@ export class BillingDashboardComponent implements OnInit {
     if (live) {
       return {
         ...live,
-        pendingBankTransferCount: live.pendingBankTransferCount || pendingCount,
-        pendingBankTransferAmount: live.pendingBankTransferAmount || pendingAmt,
+        pendingBankTransferCount: pendingCount > 0 ? pendingCount : (live.pendingBankTransferCount || 0),
+        pendingBankTransferAmount: pendingAmt > 0 ? pendingAmt : (live.pendingBankTransferAmount || 0),
         currentTotalUserSmsBalance: live.currentTotalUserSmsBalance || userBalance
       };
     }

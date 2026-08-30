@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DataService } from '../../services/data.service';
@@ -168,7 +168,7 @@ import { IconComponent } from '../shared/icon.component';
     </div>
   `
 })
-export class ProvidersComponent {
+export class ProvidersComponent implements OnInit {
   dataService = inject(DataService);
   authService = inject(AuthService);
   toastService = inject(ToastService);
@@ -177,6 +177,10 @@ export class ProvidersComponent {
   isSubmitting = false;
   isEditMode = false;
   copiedId: string | null = null;
+
+  async ngOnInit() {
+    await this.dataService.fetchLiveSmsProviders();
+  }
 
   newProvider: any = {};
 

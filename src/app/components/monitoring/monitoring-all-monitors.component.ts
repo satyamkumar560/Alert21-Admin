@@ -30,16 +30,16 @@ import { WebsiteMonitor, MonitorState } from '../../models/alert21.models';
       <!-- Filters & Search -->
       <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs flex flex-col md:flex-row items-center gap-3 justify-between">
         <!-- Search Input -->
-        <div class="relative w-full md:w-80">
+        <div class="relative w-full md:w-80 flex items-center">
+          <span class="absolute left-3 text-slate-400 pointer-events-none flex items-center">
+            <app-icon name="globe" [size]="14"></app-icon>
+          </span>
           <input 
             type="text" 
             [(ngModel)]="searchQuery" 
             placeholder="Search by URL, Name, or User..." 
-            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 pl-9 text-xs text-slate-800 focus:outline-none focus:border-indigo-500 font-medium transition-all"
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 pl-9 pr-3.5 text-xs text-slate-800 focus:outline-none focus:bg-white focus:border-indigo-500 font-medium transition-all"
           />
-          <span class="absolute left-3 top-2.5 text-slate-400">
-            <app-icon name="globe" [size]="14"></app-icon>
-          </span>
         </div>
 
         <!-- Filter Status Buttons -->

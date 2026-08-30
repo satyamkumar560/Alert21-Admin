@@ -241,7 +241,7 @@ export interface MonitoringSource {
 
 export type MonitoringPlanStatus = 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
 export type MonitoringPlanVisibility = 'PUBLIC' | 'HIDDEN' | 'CUSTOM';
-export type MonitoringChannelMode = 'DISABLED' | 'WALLET' | 'INCLUDED';
+export type MonitoringChannelMode = 'DISABLED' | 'USER_WALLET' | 'WALLET' | 'INCLUDED';
 
 export interface MonitoringPlan {
   id: string;

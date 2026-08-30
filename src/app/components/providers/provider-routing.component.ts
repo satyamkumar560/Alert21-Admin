@@ -218,6 +218,10 @@ export class ProviderRoutingComponent implements OnInit {
   inspectLoading: boolean = false;
 
   async ngOnInit() {
+    await Promise.all([
+      this.dataService.fetchLiveSmsProviders(),
+      this.dataService.fetchLiveUsers()
+    ]);
     const usersList = this.dataService.users();
     if (usersList.length > 0) {
       this.selectedUserId = usersList[0].id;

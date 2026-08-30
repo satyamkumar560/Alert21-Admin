@@ -27,6 +27,48 @@ import { MonitoringSubscription } from '../../models/alert21.models';
         </div>
       </div>
 
+      <!-- Pending Bank Transfers Alert Card -->
+      <div *ngIf="pendingTransfers().length > 0" class="bg-amber-50 border border-amber-200 rounded-2xl p-4 shadow-xs space-y-3">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold">
+              <app-icon name="bank" [size]="16"></app-icon>
+            </div>
+            <div>
+              <h3 class="text-xs font-black text-amber-900 uppercase tracking-wider">Pending Bank Transfer Approvals ({{ pendingTransfers().length }})</h3>
+              <p class="text-[11px] text-amber-700">Users who submitted offline payments for monitoring plans awaiting your verification.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="divide-y divide-amber-200/60 bg-white rounded-xl border border-amber-200/60 overflow-hidden">
+          <div *ngFor="let ord of pendingTransfers()" class="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+            <div class="space-y-0.5">
+              <div class="flex items-center gap-2">
+                <span class="font-bold text-slate-900">{{ ord.userName }}</span>
+                <span class="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-extrabold text-[10px] font-mono">{{ ord.planName }} ({{ ord.billingCycle }})</span>
+                <span class="font-mono text-slate-400 text-[10px]">{{ ord.orderNumber }}</span>
+              </div>
+              <p class="text-[11px] text-slate-500">
+                Amount: <strong class="text-emerald-700 font-mono">₹{{ ord.totalPayable | number:'1.2-2' }}</strong> | 
+                UTR: <strong class="font-mono text-slate-800">{{ ord.utrNumber }}</strong> | 
+                Submitted: <span class="font-mono text-slate-400">{{ ord.createdAt | date:'medium' }}</span>
+              </p>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <button 
+                (click)="approveTransfer(ord)" 
+                [disabled]="isApproving"
+                class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs flex items-center gap-1.5 transition-all">
+                <app-icon name="check" [size]="12"></app-icon>
+                <span>{{ isApproving ? 'Approving...' : 'Approve & Activate Plan' }}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Subscriptions Table -->
       <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
         <div class="overflow-x-auto">
@@ -169,9 +211,24 @@ export class MonitoringSubscriptionsComponent implements OnInit {
   newMaxMonitors = 20;
   newMaxContacts = 5;
   adminNote = '';
+  isApproving = false;
 
   async ngOnInit() {
     await this.dataService.fetchMonitoringSubscriptions();
+    await this.dataService.fetchMonitoringBankTransfers();
+  }
+
+  pendingTransfers() {
+    return this.dataService.monitoringBankTransfers().filter(t => t.adminStatus === 'PENDING');
+  }
+
+  async approveTransfer(ord: any) {
+    this.isApproving = true;
+    const success = await this.dataService.approveMonitoringBankTransfer(ord.id);
+    this.isApproving = false;
+    if (success) {
+      await this.dataService.fetchMonitoringSubscriptions();
+    }
   }
 
   openQuotaModal(s: MonitoringSubscription) {

@@ -48,72 +48,72 @@ import { MonitoringPlan, MonitoringAddon } from '../../models/alert21.models';
       </div>
 
       <!-- TAB 1: PLANS GRID / TABLE -->
-      <div *ngIf="activeTab === 'PLANS'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div *ngFor="let plan of dataService.monitoringPlans()" class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 flex flex-col justify-between relative overflow-hidden">
+      <div *ngIf="activeTab === 'PLANS'" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div *ngFor="let plan of dataService.monitoringPlans()" class="bg-white rounded-xl border border-slate-200 shadow-xs p-4 flex flex-col justify-between relative overflow-hidden hover:shadow-md transition-all">
           <!-- Top Badge -->
-          <div *ngIf="plan.badge" class="absolute top-3 right-3 bg-indigo-50 border border-indigo-200 text-indigo-700 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase">
+          <div *ngIf="plan.badge" class="absolute top-2.5 right-2.5 bg-indigo-50 border border-indigo-200 text-indigo-700 text-[9px] font-black px-2 py-0.5 rounded-full uppercase">
             {{ plan.badge }}
           </div>
 
-          <div class="space-y-4">
+          <div class="space-y-3">
             <div>
-              <span class="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider">{{ plan.code }}</span>
-              <h3 class="text-lg font-black text-slate-900">{{ plan.name }}</h3>
+              <span class="text-[9px] font-mono font-bold text-slate-400 uppercase tracking-wider">{{ plan.code }}</span>
+              <h3 class="text-base font-black text-slate-900 leading-tight">{{ plan.name }}</h3>
             </div>
 
             <!-- Price -->
-            <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
+            <div class="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
               <div class="flex items-baseline gap-1">
-                <span class="text-2xl font-black text-slate-900 font-mono">₹{{ plan.monthlyPrice }}</span>
-                <span class="text-xs text-slate-500 font-bold">/ month + 18% GST</span>
+                <span class="text-xl font-black text-slate-900 font-mono">₹{{ plan.monthlyPrice }}</span>
+                <span class="text-[10px] text-slate-500 font-bold">/ mo + 18% GST</span>
               </div>
-              <p class="text-[11px] text-slate-400 font-medium mt-0.5">Annual: ₹{{ plan.annualPrice }} / yr (Save 2 months)</p>
+              <p class="text-[10px] text-slate-400 font-medium mt-0.5">Annual: ₹{{ plan.annualPrice }} / yr (Save 2 mo)</p>
             </div>
 
             <!-- Entitlements List -->
-            <ul class="space-y-2 text-xs text-slate-700 font-medium">
-              <li class="flex items-center gap-2">
-                <app-icon name="check-circle" [size]="14" className="text-emerald-600"></app-icon>
+            <ul class="space-y-1.5 text-[11px] text-slate-700 font-medium">
+              <li class="flex items-center gap-1.5">
+                <app-icon name="check-circle" [size]="12" className="text-emerald-600 shrink-0"></app-icon>
                 <span><strong>{{ plan.includedMonitors }}</strong> Monitors Included</span>
               </li>
-              <li class="flex items-center gap-2">
-                <app-icon name="check-circle" [size]="14" className="text-emerald-600"></app-icon>
-                <span><strong>{{ plan.checkIntervalSeconds }}s</strong> Monitoring Interval</span>
+              <li class="flex items-center gap-1.5">
+                <app-icon name="check-circle" [size]="12" className="text-emerald-600 shrink-0"></app-icon>
+                <span><strong>{{ plan.checkIntervalSeconds }}s</strong> Check Interval</span>
               </li>
-              <li class="flex items-center gap-2">
-                <app-icon name="check-circle" [size]="14" className="text-emerald-600"></app-icon>
-                <span><strong>{{ plan.retentionDays }} Days</strong> Check / Incident History</span>
+              <li class="flex items-center gap-1.5">
+                <app-icon name="check-circle" [size]="12" className="text-emerald-600 shrink-0"></app-icon>
+                <span><strong>{{ plan.retentionDays }} Days</strong> Retention</span>
               </li>
-              <li class="flex items-center gap-2">
-                <app-icon name="check-circle" [size]="14" className="text-emerald-600"></app-icon>
-                <span><strong>{{ plan.notificationContacts }}</strong> Alert Notification Contacts</span>
+              <li class="flex items-center gap-1.5">
+                <app-icon name="check-circle" [size]="12" className="text-emerald-600 shrink-0"></app-icon>
+                <span><strong>{{ plan.notificationContacts }}</strong> Alert Contacts</span>
               </li>
-              <li class="flex items-center gap-2">
-                <app-icon name="check-circle" [size]="14" className="text-emerald-600"></app-icon>
-                <span>SSL Monitoring: <strong>{{ plan.sslMonitoring ? 'Enabled' : 'Disabled' }}</strong></span>
+              <li class="flex items-center gap-1.5">
+                <app-icon name="check-circle" [size]="12" className="text-emerald-600 shrink-0"></app-icon>
+                <span>SSL: <strong>{{ plan.sslMonitoring ? 'Enabled' : 'Disabled' }}</strong></span>
               </li>
-              <li class="flex items-center gap-2">
-                <app-icon name="check-circle" [size]="14" className="text-emerald-600"></app-icon>
-                <span>SMS / WhatsApp: <strong class="uppercase text-[11px]">{{ plan.smsMode }}</strong></span>
+              <li class="flex items-center gap-1.5">
+                <app-icon name="check-circle" [size]="12" className="text-emerald-600 shrink-0"></app-icon>
+                <span class="truncate">Channels: <strong class="uppercase text-[10px]">{{ plan.smsMode }}</strong></span>
               </li>
-              <li class="flex items-center gap-2">
-                <app-icon name="check-circle" [size]="14" className="text-emerald-600"></app-icon>
-                <span>Probe Verification: <strong>{{ plan.verificationSources }} Source(s)</strong></span>
+              <li class="flex items-center gap-1.5">
+                <app-icon name="check-circle" [size]="12" className="text-emerald-600 shrink-0"></app-icon>
+                <span>Verification: <strong>{{ plan.verificationSources }} Source(s)</strong></span>
               </li>
             </ul>
           </div>
 
           <!-- Card Footer Actions -->
-          <div class="flex items-center justify-between pt-4 mt-4 border-t border-slate-100">
-            <span class="px-2 py-0.5 text-[10px] font-bold rounded uppercase"
-                  [ngClass]="plan.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'">
+          <div class="flex items-center justify-between pt-3 mt-3 border-t border-slate-100">
+            <span class="px-2 py-0.5 text-[9px] font-bold rounded uppercase font-mono"
+                  [ngClass]="plan.status === 'ACTIVE' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-600'">
               {{ plan.status }}
             </span>
-            <div class="flex items-center gap-1.5">
-              <button (click)="openEditModal(plan)" class="px-3 py-1 text-xs font-bold text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all">
+            <div class="flex items-center gap-1">
+              <button (click)="openEditModal(plan)" class="px-2.5 py-1 text-xs font-bold text-indigo-600 hover:bg-indigo-50 rounded-md transition-all">
                 Edit
               </button>
-              <button (click)="archivePlan(plan)" class="px-3 py-1 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-lg transition-all">
+              <button (click)="archivePlan(plan)" class="px-2.5 py-1 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-md transition-all">
                 Archive
               </button>
             </div>
@@ -216,7 +216,7 @@ import { MonitoringPlan, MonitoringAddon } from '../../models/alert21.models';
               <label class="block font-bold text-slate-700 uppercase mb-1">SMS Alerts Mode</label>
               <select [(ngModel)]="currentPlan.smsMode" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold">
                 <option value="DISABLED">Disabled</option>
-                <option value="WALLET">Deduct from User SMS Wallet</option>
+                <option value="USER_WALLET">Deduct from User SMS Wallet</option>
                 <option value="INCLUDED">Included in Plan</option>
               </select>
             </div>
@@ -225,7 +225,7 @@ import { MonitoringPlan, MonitoringAddon } from '../../models/alert21.models';
               <label class="block font-bold text-slate-700 uppercase mb-1">WhatsApp Alerts Mode</label>
               <select [(ngModel)]="currentPlan.whatsAppMode" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold">
                 <option value="DISABLED">Disabled</option>
-                <option value="WALLET">Deduct from User WA Wallet</option>
+                <option value="USER_WALLET">Deduct from User WA Wallet</option>
                 <option value="INCLUDED">Included in Plan</option>
               </select>
             </div>
@@ -271,8 +271,8 @@ export class MonitoringPlansComponent implements OnInit {
       checkIntervalSeconds: 60,
       retentionDays: 60,
       notificationContacts: 5,
-      smsMode: 'WALLET',
-      whatsAppMode: 'WALLET',
+      smsMode: 'USER_WALLET',
+      whatsAppMode: 'USER_WALLET',
       sslMonitoring: true,
       slowResponseAlert: true,
       verificationSources: 1,

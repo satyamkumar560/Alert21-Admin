@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DataService } from '../../services/data.service';
@@ -200,7 +200,7 @@ import { IconComponent } from '../shared/icon.component';
     </div>
   `
 })
-export class DltApprovalsComponent {
+export class DltApprovalsComponent implements OnInit {
   dataService = inject(DataService);
   authService = inject(AuthService);
 
@@ -209,6 +209,10 @@ export class DltApprovalsComponent {
   adminRemarks: string = '';
   targetStatus: DltStatus = 'ACTIVE';
   isUpdating = false;
+
+  async ngOnInit() {
+    await this.dataService.fetchLivePrincipalEntities();
+  }
 
   get activePeCount(): number {
     return this.dataService.principalEntities().filter(pe => pe.status === 'ACTIVE').length;
