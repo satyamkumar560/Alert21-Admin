@@ -74,11 +74,17 @@ import { MonitorIncident } from '../../models/alert21.models';
                 </td>
 
                 <!-- Failure Reason -->
-                <td class="py-3.5 px-4 max-w-xs">
-                  <span class="inline-block px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-100 text-slate-700 mb-1">
-                    {{ inc.errorCode }}
-                  </span>
-                  <p class="text-xs text-slate-700 line-clamp-2">{{ inc.failureReason }}</p>
+                <td class="py-3.5 px-4 max-w-sm">
+                  <div class="space-y-1">
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                      <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold border"
+                            [ngClass]="getErrorBadge(inc.errorCode).class">
+                        {{ getErrorBadge(inc.errorCode).label }}
+                      </span>
+                      <span class="text-[9px] font-mono text-slate-400">Code: {{ inc.errorCode }}</span>
+                    </div>
+                    <p class="text-xs text-slate-800 font-medium leading-relaxed">{{ inc.failureReason }}</p>
+                  </div>
                 </td>
 
                 <!-- Detection Probes -->
@@ -123,8 +129,10 @@ import { MonitorIncident } from '../../models/alert21.models';
               </tr>
 
               <tr *ngIf="filteredIncidents().length === 0">
-                <td colspan="7" class="text-center py-10 text-slate-400 text-xs">
-                  No {{ activeTab === 'OPEN' ? 'open' : 'resolved' }} incidents logged in the system.
+                <td colspan="7" class="py-12 text-center text-slate-400">
+                  <app-icon name="shield-check" [size]="32" className="mx-auto mb-2 text-emerald-500 opacity-60"></app-icon>
+                  <p class="font-bold text-slate-600">No {{ activeTab.toLowerCase() }} incidents recorded.</p>
+                  <p class="text-[11px] text-slate-400 mt-0.5">All monitored endpoints are operating normally within SLA.</p>
                 </td>
               </tr>
             </tbody>
@@ -132,11 +140,11 @@ import { MonitorIncident } from '../../models/alert21.models';
         </div>
       </div>
 
-      <!-- Resend Alert Modal -->
-      <div *ngIf="selectedIncident" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
-        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-slate-100">
-          <div class="flex items-center justify-between">
-            <h3 class="text-base font-black text-slate-900">Manual Resend Alert (Audit Logged)</h3>
+      <!-- Resend Modal -->
+      <div *ngIf="selectedIncident" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <h3 class="text-sm font-black text-slate-900 uppercase">Manual Alert Dispatch</h3>
             <button (click)="selectedIncident = null" class="p-1 rounded-lg text-slate-400 hover:bg-slate-100">
               <app-icon name="x" [size]="16"></app-icon>
             </button>
@@ -201,6 +209,35 @@ export class MonitoringIncidentsComponent implements OnInit {
 
   filteredIncidents() {
     return this.dataService.monitorIncidents().filter(i => i.status === this.activeTab);
+  }
+
+  getErrorBadge(code: string) {
+    const c = (code || '').toUpperCase();
+    if (c.includes('TIMEOUT')) {
+      return { label: '⏱️ Connection Timeout', class: 'bg-amber-50 text-amber-800 border-amber-200' };
+    }
+    if (c.includes('DNS')) {
+      return { label: '🌐 DNS Resolution Failure', class: 'bg-rose-50 text-rose-800 border-rose-200' };
+    }
+    if (c.includes('REFUSED')) {
+      return { label: '🔌 Connection Refused', class: 'bg-red-50 text-red-800 border-red-200' };
+    }
+    if (c.includes('SOCKET') || c.includes('RESET')) {
+      return { label: '🔀 Socket Reset / Dropped', class: 'bg-orange-50 text-orange-800 border-orange-200' };
+    }
+    if (c.includes('REDIRECT')) {
+      return { label: '🔁 Redirect Loop', class: 'bg-yellow-50 text-yellow-800 border-yellow-200' };
+    }
+    if (c.includes('SSL') || c.includes('TLS')) {
+      return { label: '🔒 SSL / TLS Failure', class: 'bg-purple-50 text-purple-800 border-purple-200' };
+    }
+    if (c.includes('5XX') || c.includes('500') || c.includes('502') || c.includes('503')) {
+      return { label: '⚠️ HTTP 5xx Server Error', class: 'bg-rose-50 text-rose-800 border-rose-200' };
+    }
+    if (c.includes('4XX') || c.includes('404') || c.includes('403')) {
+      return { label: '🚫 HTTP 4xx Client Error', class: 'bg-blue-50 text-blue-800 border-blue-200' };
+    }
+    return { label: '⚠️ Outage Detected', class: 'bg-slate-100 text-slate-800 border-slate-200' };
   }
 
   openResendModal(inc: MonitorIncident) {

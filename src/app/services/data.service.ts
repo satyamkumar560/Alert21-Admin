@@ -2158,13 +2158,13 @@ export class DataService {
             userEmail: typeof i.user_id === 'object' && i.user_id ? (i.user_id.email || '') : (i.userEmail || ''),
             startedAt: i.started_at || i.startedAt || i.createdAt,
             resolvedAt: i.resolved_at || i.resolvedAt,
-            durationSeconds: i.duration_seconds ?? i.durationSeconds ?? 0,
-            durationText: i.duration_text || i.durationText || 'N/A',
-            failureReason: i.failure_reason || i.failureReason || 'Outage detected',
-            errorCode: i.error_code || i.errorCode || 'UNKNOWN_ERROR',
+            durationSeconds: i.duration_sec ?? i.duration_seconds ?? i.durationSeconds ?? 0,
+            durationText: i.duration_text || (i.duration_sec ? `${Math.round(i.duration_sec / 60)} mins` : 'Ongoing Outage'),
+            failureReason: i.root_cause_message || i.failure_reason || i.failureReason || 'Target website failed automated health checks',
+            errorCode: i.root_cause_error_code || i.error_code || i.errorCode || 'OUTAGE_DETECTED',
             detectionSource: i.detection_source || i.detectionSource || 'A21_NATIVE_PRIMARY',
             verificationSource: i.verification_source || i.verificationSource,
-            status: i.status || 'OPEN',
+            status: i.state || i.status || 'OPEN',
             alertsSent: i.alerts_sent || i.alertsSent || { email: 0, sms: 0, whatsapp: 0, inApp: 0 },
             deliveryStatus: i.delivery_status || i.deliveryStatus || 'DELIVERED'
           }));
