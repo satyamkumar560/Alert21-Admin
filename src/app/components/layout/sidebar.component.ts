@@ -215,6 +215,14 @@ export type NavTab =
   | 'monitoring-subscriptions'
   | 'monitoring-sources'
   | 'monitoring-templates'
+  | 'email-dashboard'
+  | 'email-providers'
+  | 'email-domains'
+  | 'email-senders'
+  | 'email-templates'
+  | 'email-logs'
+  | 'email-pricing'
+  | 'email-reputation'
   | 'dlt-pe'
   | 'dlt-sender'
   | 'dlt-template'
@@ -406,6 +414,99 @@ export type NavTab =
 
           <app-icon name="message-square" [size]="16"></app-icon>
           <span>Alert Templates</span>
+        </button>
+
+        <!-- EMAIL ALERTS SECTION (TASK #06) -->
+        <div class="pt-3 pb-1 px-3">
+          <p class="text-[10px] font-extrabold uppercase text-slate-400 tracking-wider">Email Alerts</p>
+        </div>
+
+        <!-- Email Dashboard -->
+        <button
+          type="button"
+          (click)="onSelectTab('email-dashboard')"
+          [ngClass]="getNavClass('email-dashboard')"
+          class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all">
+          <app-icon name="activity" [size]="16"></app-icon>
+          <span>Email Dashboard</span>
+        </button>
+
+        <!-- Email Providers (SES) -->
+        <button
+          type="button"
+          (click)="onSelectTab('email-providers')"
+          [ngClass]="getNavClass('email-providers')"
+          class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all">
+          <app-icon name="server" [size]="16"></app-icon>
+          <span>Email Providers (SES)</span>
+        </button>
+
+        <!-- Sending Domains -->
+        <button
+          type="button"
+          (click)="onSelectTab('email-domains')"
+          [ngClass]="getNavClass('email-domains')"
+          class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all">
+          <app-icon name="globe" [size]="16"></app-icon>
+          <span>Sending Domains</span>
+          <span
+            class="ml-auto bg-slate-800 text-slate-300 text-[10px] px-2 py-0.5 rounded-full font-bold">
+            {{ dataService.emailDomains().length }}
+          </span>
+        </button>
+
+        <!-- Sender From Emails -->
+        <button
+          type="button"
+          (click)="onSelectTab('email-senders')"
+          [ngClass]="getNavClass('email-senders')"
+          class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all">
+          <app-icon name="mail" [size]="16"></app-icon>
+          <span>Sender From Emails</span>
+        </button>
+
+        <!-- Email Templates -->
+        <button
+          type="button"
+          (click)="onSelectTab('email-templates')"
+          [ngClass]="getNavClass('email-templates')"
+          class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all">
+          <app-icon name="copy" [size]="16"></app-icon>
+          <span>Email Templates</span>
+          <span
+            class="ml-auto bg-slate-800 text-slate-300 text-[10px] px-2 py-0.5 rounded-full font-bold">
+            {{ dataService.emailTemplates().length }}
+          </span>
+        </button>
+
+        <!-- Email Logs / Delivery -->
+        <button
+          type="button"
+          (click)="onSelectTab('email-logs')"
+          [ngClass]="getNavClass('email-logs')"
+          class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all">
+          <app-icon name="file-text" [size]="16"></app-icon>
+          <span>Email Logs & Delivery</span>
+        </button>
+
+        <!-- Email Pricing Slabs -->
+        <button
+          type="button"
+          (click)="onSelectTab('email-pricing')"
+          [ngClass]="getNavClass('email-pricing')"
+          class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all">
+          <app-icon name="tag" [size]="16"></app-icon>
+          <span>Email Pricing Slabs</span>
+        </button>
+
+        <!-- Bounce & Reputation -->
+        <button
+          type="button"
+          (click)="onSelectTab('email-reputation')"
+          [ngClass]="getNavClass('email-reputation')"
+          class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all">
+          <app-icon name="shield-check" [size]="16"></app-icon>
+          <span>Bounce & Reputation</span>
         </button>
 
         <!-- DLT REGISTRY SECTION -->

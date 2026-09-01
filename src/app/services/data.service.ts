@@ -24,7 +24,14 @@ import {
   WebsiteMonitor,
   MonitorIncident,
   MonitoringTemplate,
-  MonitoringDashboardStats
+  MonitoringDashboardStats,
+  EmailProvider,
+  EmailSendingDomain,
+  EmailSender,
+  EmailTemplate,
+  EmailTransaction,
+  EmailPricingSlab,
+  EmailDashboardStats
 } from '../models/alert21.models';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
@@ -58,6 +65,16 @@ export class DataService {
 
   liveApiStats = signal<any | null>(null);
 
+  // Task #06 Email Alert Service Signals
+  emailProviders = signal<EmailProvider[]>([]);
+  emailDomains = signal<EmailSendingDomain[]>([]);
+  emailSenders = signal<EmailSender[]>([]);
+  emailTemplates = signal<EmailTemplate[]>([]);
+  emailTransactions = signal<EmailTransaction[]>([]);
+  emailPricingSlabs = signal<EmailPricingSlab[]>([]);
+  emailDashboardStats = signal<EmailDashboardStats | null>(null);
+  emailBankTransfers = signal<any[]>([]);
+
   constructor() {
     this.fetchLiveDashboardStats();
     this.fetchLiveUsers();
@@ -67,6 +84,8 @@ export class DataService {
     this.fetchLiveSmsProviders();
     this.fetchLivePricingSlabs();
     this.fetchLiveBankTransfers();
+    this.fetchMonitoringBankTransfers();
+    this.fetchEmailBankTransfers();
     this.fetchBillingDashboardStats();
   }
 
@@ -2302,6 +2321,651 @@ export class DataService {
     }
     if (lastError) {
       this.toastService.showError('Template Save Failed', lastError);
+    }
+    return false;
+  }
+
+  // =========================================================
+  // TASK #06: EMAIL ALERT SERVICE (AMAZON SES) API METHODS
+  // =========================================================
+
+  /**
+   * GET /api/admin/email/dashboard
+   */
+  async fetchEmailDashboardStats() {
+    const headers = this.getAuthHeaders();
+    const urls = [
+      'https://app.alert21.in/back/api/v1/admin/email/dashboard',
+      'https://app.alert21.in/back/api/admin/email/dashboard'
+    ];
+
+    for (const url of urls) {
+      try {
+        const res = await firstValueFrom(
+          this.http.get<any>(url, { headers }).pipe(catchError(() => of(null)))
+        );
+        if (res && res.success && res.data) {
+          const d = res.data;
+          const sent = d.total_emails_sent ?? d.totalEmailsSent ?? 0;
+          const delivered = d.delivered_emails ?? d.deliveredEmails ?? 0;
+          const bounced = d.bounced_emails ?? d.bouncedEmails ?? 0;
+          const complaints = d.complaint_count ?? d.complaintCount ?? 0;
+
+          const stats: EmailDashboardStats = {
+            totalCreditsDistributed: d.total_credits_distributed ?? d.totalCreditsDistributed ?? 0,
+            currentTotalUserBalance: d.current_total_user_balance ?? d.currentTotalUserBalance ?? 0,
+            totalEmailsSold: d.total_emails_sold ?? d.totalEmailsSold ?? 0,
+            totalEmailsSent: sent,
+            deliveredEmails: delivered,
+            bouncedEmails: bounced,
+            complaintCount: complaints,
+            verifiedDomainsCount: d.verified_domains_count ?? d.verifiedDomainsCount ?? 0,
+            activeTemplatesCount: d.active_templates_count ?? d.activeTemplatesCount ?? 0,
+            totalBillingValue: d.total_billing_value ?? d.totalBillingValue ?? 0,
+            gstCollected: d.gst_collected ?? d.gstCollected ?? 0,
+            avgSellingPricePerEmail: d.avg_selling_price ?? d.avgSellingPricePerEmail ?? 0.15,
+            totalPaymentReceived: d.total_payment_received ?? d.totalPaymentReceived ?? 0,
+            deliveryRatePercent: sent > 0 ? Number(((delivered / sent) * 100).toFixed(1)) : 100,
+            bounceRatePercent: sent > 0 ? Number(((bounced / sent) * 100).toFixed(2)) : 0,
+            complaintRatePercent: sent > 0 ? Number(((complaints / sent) * 100).toFixed(3)) : 0
+          };
+          this.emailDashboardStats.set(stats);
+          break;
+        }
+      } catch (e) {}
+    }
+  }
+
+  /**
+   * GET /api/admin/email/providers
+   */
+  async fetchEmailProviders() {
+    const headers = this.getAuthHeaders();
+    const urls = [
+      'https://app.alert21.in/back/api/v1/admin/email/providers',
+      'https://app.alert21.in/back/api/admin/email/providers'
+    ];
+
+    for (const url of urls) {
+      try {
+        const res = await firstValueFrom(
+          this.http.get<any>(url, { headers }).pipe(catchError(() => of(null)))
+        );
+        const list = Array.isArray(res?.data?.providers)
+          ? res.data.providers
+          : (Array.isArray(res?.data?.items)
+              ? res.data.items
+              : (Array.isArray(res?.data)
+                  ? res.data
+                  : (Array.isArray(res?.providers) ? res.providers : null)));
+
+        if (list && Array.isArray(list)) {
+          const mapped: EmailProvider[] = list.map((p: any) => ({
+            id: p._id || p.id,
+            name: p.name || 'Amazon SES',
+            code: p.code || 'AWS_SES',
+            region: p.region || 'ap-southeast-2',
+            accessKeyId: p.access_key_id || p.accessKeyId || '',
+            secretAccessKeyMasked: p.secret_access_key_masked || p.secretAccessKeyMasked || '••••••••••••••••',
+            configurationSet: p.configuration_set || p.configurationSet,
+            callbackSecret: p.callback_secret || p.callbackSecret,
+            status: p.status || 'ACTIVE',
+            isDefault: p.is_default ?? p.isDefault ?? true,
+            createdAt: p.createdAt || p.created_at,
+            updatedAt: p.updatedAt || p.updated_at
+          }));
+          this.emailProviders.set(mapped);
+          break;
+        }
+      } catch (e) {}
+    }
+  }
+
+  /**
+   * POST /api/admin/email/providers or PUT /api/admin/email/providers/:id
+   */
+  async saveEmailProvider(provider: Partial<EmailProvider>): Promise<boolean> {
+    const headers = this.getAuthHeaders();
+    const isEdit = !!provider.id;
+    const payload: any = {
+      name: provider.name || 'Amazon SES',
+      code: provider.code || 'AWS_SES',
+      region: provider.region || 'ap-southeast-2',
+      access_key_id: provider.accessKeyId,
+      configuration_set: provider.configurationSet,
+      callback_secret: provider.callbackSecret,
+      status: provider.status || 'ACTIVE'
+    };
+    if (provider.secretAccessKey && provider.secretAccessKey.trim()) {
+      payload.secret_access_key = provider.secretAccessKey.trim();
+    }
+
+    const base = isEdit 
+      ? `https://app.alert21.in/back/api/admin/email/providers/${provider.id}`
+      : `https://app.alert21.in/back/api/admin/email/providers`;
+
+    try {
+      const res = isEdit
+        ? await firstValueFrom(this.http.put<any>(base, payload, { headers }))
+        : await firstValueFrom(this.http.post<any>(base, payload, { headers }));
+
+      if (res && (res.success || res.data)) {
+        await this.fetchEmailProviders();
+        this.toastService.showSuccess('Provider Saved', 'Amazon SES provider configuration saved successfully.');
+        return true;
+      }
+    } catch (e: any) {
+      const msg = e?.error?.message || e?.message || 'Failed to save SES provider configuration';
+      this.toastService.showError('Provider Error', msg);
+    }
+    return false;
+  }
+
+  /**
+   * POST /api/admin/email/providers/:id/test
+   */
+  async testEmailProviderConnection(providerId: string): Promise<{ success: boolean; message: string; quota?: any }> {
+    const headers = this.getAuthHeaders();
+    const url = `https://app.alert21.in/back/api/admin/email/providers/${providerId}/test`;
+    try {
+      const res = await firstValueFrom(this.http.post<any>(url, {}, { headers }));
+      if (res && res.success) {
+        this.toastService.showSuccess('SES Connection Verified', res.message || 'Amazon SES credentials and region verified successfully.');
+        return { success: true, message: res.message || 'Connection verified', quota: res.data?.quota };
+      } else {
+        const msg = res?.message || 'Failed to connect to Amazon SES.';
+        this.toastService.showError('SES Test Failed', msg);
+        return { success: false, message: msg };
+      }
+    } catch (e: any) {
+      let rawMsg = e?.error?.message || e?.message || 'SES Connection Test Failed';
+      const msgMatch = rawMsg.match(/<Message>([^<]+)<\/Message>/);
+      const codeMatch = rawMsg.match(/<Code>([^<]+)<\/Code>/);
+      let cleanMsg = msgMatch 
+        ? `${msgMatch[1]}${codeMatch ? ` (${codeMatch[1]})` : ''}`
+        : rawMsg.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+      
+      return { success: false, message: cleanMsg };
+    }
+  }
+
+  /**
+   * GET /api/admin/email/domains
+   */
+  async fetchEmailDomains() {
+    const headers = this.getAuthHeaders();
+    const urls = [
+      'https://app.alert21.in/back/api/v1/admin/email/domains?limit=1000',
+      'https://app.alert21.in/back/api/admin/email/domains?limit=1000'
+    ];
+
+    for (const url of urls) {
+      try {
+        const res = await firstValueFrom(
+          this.http.get<any>(url, { headers }).pipe(catchError(() => of(null)))
+        );
+        const list = Array.isArray(res?.data?.domains)
+          ? res.data.domains
+          : (Array.isArray(res?.data?.items)
+              ? res.data.items
+              : (Array.isArray(res?.data)
+                  ? res.data
+                  : (Array.isArray(res?.domains) ? res.domains : null)));
+
+        if (list && Array.isArray(list)) {
+          const mapped: EmailSendingDomain[] = list.map((d: any) => ({
+            id: d._id || d.id,
+            userId: d.user_id?._id || d.user_id || '',
+            userName: d.user_id?.fullName || d.userName || 'User',
+            userEmail: d.user_id?.email || d.userEmail || '',
+            domain: d.domain,
+            status: ((d.verification_status || d.status || 'PENDING_DNS') as any).toUpperCase(),
+            dkimTokens: Array.isArray(d.dkim_tokens) ? d.dkim_tokens : (d.dkimTokens || []),
+            dnsRecords: Array.isArray(d.dns_records) ? d.dns_records.map((r: any) => ({
+              recordType: r.record_type || r.type || 'CNAME',
+              name: r.name || r.host,
+              value: r.value || r.target,
+              status: r.status || 'PENDING'
+            })) : [],
+            customMailFromDomain: d.custom_mail_from_domain || d.customMailFromDomain,
+            customMailFromStatus: d.custom_mail_from_status || d.customMailFromStatus,
+            verifiedAt: d.verified_at || d.verifiedAt,
+            createdAt: d.createdAt || d.created_at || new Date().toISOString(),
+            updatedAt: d.updatedAt || d.updated_at
+          }));
+          this.emailDomains.set(mapped);
+          break;
+        }
+      } catch (e) {}
+    }
+  }
+
+  /**
+   * POST /api/admin/email/domains/:id/verify (Admin Manual Override / Force Approve)
+   */
+  async approveEmailDomain(domainId: string): Promise<boolean> {
+    const headers = this.getAuthHeaders();
+    const url = `https://app.alert21.in/back/api/admin/email/domains/${domainId}/verify`;
+    try {
+      const res = await firstValueFrom(this.http.post<any>(url, {}, { headers }));
+      if (res && res.success) {
+        await this.fetchEmailDomains();
+        await this.fetchEmailSenders();
+        this.toastService.showSuccess('Domain Approved', res.message || 'Domain marked as VERIFIED and active.');
+        return true;
+      }
+    } catch (e: any) {
+      const msg = e?.error?.message || e?.message || 'Approval failed';
+      this.toastService.showError('Approval Error', msg);
+    }
+    return false;
+  }
+
+  /**
+   * POST /api/admin/email/domains/:id/check-verification
+   */
+  async checkEmailDomainVerification(domainId: string): Promise<boolean> {
+    const headers = this.getAuthHeaders();
+    const url = `https://app.alert21.in/back/api/admin/email/domains/${domainId}/check-verification`;
+    try {
+      const res = await firstValueFrom(this.http.post<any>(url, {}, { headers }));
+      if (res && res.success) {
+        await this.fetchEmailDomains();
+        await this.fetchEmailSenders();
+        this.toastService.showSuccess('Verification Synced', res.message || 'Domain status synced with Amazon SES.');
+        return true;
+      }
+    } catch (e: any) {
+      const msg = e?.error?.message || e?.message || 'Verification check failed';
+      this.toastService.showError('Verification Error', msg);
+    }
+    return false;
+  }
+
+  /**
+   * GET /api/admin/email/senders
+   */
+  async fetchEmailSenders() {
+    const headers = this.getAuthHeaders();
+    const urls = [
+      'https://app.alert21.in/back/api/v1/admin/email/senders?limit=1000',
+      'https://app.alert21.in/back/api/admin/email/senders?limit=1000'
+    ];
+
+    for (const url of urls) {
+      try {
+        const res = await firstValueFrom(
+          this.http.get<any>(url, { headers }).pipe(catchError(() => of(null)))
+        );
+        const list = Array.isArray(res?.data?.senders)
+          ? res.data.senders
+          : (Array.isArray(res?.data?.items)
+              ? res.data.items
+              : (Array.isArray(res?.data)
+                  ? res.data
+                  : (Array.isArray(res?.senders) ? res.senders : null)));
+
+        if (list && Array.isArray(list)) {
+          const mapped: EmailSender[] = list.map((s: any) => ({
+            id: s._id || s.id,
+            userId: s.user_id?._id || s.user_id || '',
+            userName: s.user_id?.fullName || s.userName || 'User',
+            userEmail: s.user_id?.email || s.userEmail || '',
+            domainId: s.domain_id?._id || s.domain_id || '',
+            domainName: s.domain_id?.domain || s.domainName || '',
+            fromName: s.from_name || s.fromName || '',
+            fromEmail: s.from_email || s.fromEmail || '',
+            replyToEmail: s.reply_to_email || s.replyToEmail,
+            status: s.status || 'ACTIVE',
+            createdAt: s.createdAt || s.created_at || new Date().toISOString()
+          }));
+          this.emailSenders.set(mapped);
+          break;
+        }
+      } catch (e) {}
+    }
+  }
+
+  /**
+   * GET /api/admin/email/templates
+   */
+  async fetchEmailTemplates() {
+    const headers = this.getAuthHeaders();
+    const urls = [
+      'https://app.alert21.in/back/api/v1/admin/email/templates?limit=1000',
+      'https://app.alert21.in/back/api/admin/email/templates?limit=1000'
+    ];
+
+    for (const url of urls) {
+      try {
+        const res = await firstValueFrom(
+          this.http.get<any>(url, { headers }).pipe(catchError(() => of(null)))
+        );
+        const list = Array.isArray(res?.data?.templates)
+          ? res.data.templates
+          : (Array.isArray(res?.data?.items)
+              ? res.data.items
+              : (Array.isArray(res?.data)
+                  ? res.data
+                  : (Array.isArray(res?.templates) ? res.templates : null)));
+
+        if (list && Array.isArray(list)) {
+          const mapped: EmailTemplate[] = list.map((t: any) => ({
+            id: t._id || t.id,
+            userId: t.user_id?._id || t.user_id || '',
+            userName: t.user_id?.fullName || t.userName || 'User',
+            userEmail: t.user_id?.email || t.userEmail || '',
+            name: t.name,
+            subject: t.subject,
+            htmlBody: t.html_body || t.htmlBody || '',
+            plainTextBody: t.plain_text_body || t.plainTextBody,
+            variables: Array.isArray(t.variables) ? t.variables : [],
+            status: t.status || 'ACTIVE',
+            createdAt: t.createdAt || t.created_at || new Date().toISOString(),
+            updatedAt: t.updatedAt || t.updated_at
+          }));
+          this.emailTemplates.set(mapped);
+          break;
+        }
+      } catch (e) {}
+    }
+  }
+
+  /**
+   * GET /api/admin/email/logs
+   */
+  async fetchEmailTransactions() {
+    const headers = this.getAuthHeaders();
+    const urls = [
+      'https://app.alert21.in/back/api/v1/admin/email/logs?limit=500',
+      'https://app.alert21.in/back/api/admin/email/logs?limit=500'
+    ];
+
+    for (const url of urls) {
+      try {
+        const res = await firstValueFrom(
+          this.http.get<any>(url, { headers }).pipe(catchError(() => of(null)))
+        );
+        const list = Array.isArray(res?.data?.transactions)
+          ? res.data.transactions
+          : (Array.isArray(res?.data?.items)
+              ? res.data.items
+              : (Array.isArray(res?.data)
+                  ? res.data
+                  : (Array.isArray(res?.items) ? res.items : null)));
+
+        if (list && Array.isArray(list)) {
+          const mapped: EmailTransaction[] = list.map((tx: any) => ({
+            id: tx._id || tx.id,
+            transactionId: tx.transaction_id || tx.transactionId || tx._id,
+            userId: tx.user_id?._id || tx.user_id || '',
+            userName: tx.user_id?.fullName || tx.userName || 'User',
+            userEmail: tx.user_id?.email || tx.userEmail || '',
+            providerId: tx.provider_id || '',
+            providerName: tx.provider_name || 'Amazon SES',
+            providerMessageId: tx.provider_message_id || tx.providerMessageId,
+            domainId: tx.domain_id || '',
+            domainName: tx.domain_name || '',
+            senderId: tx.sender_id || '',
+            fromEmail: tx.from_email || tx.fromEmail || '',
+            fromName: tx.from_name || tx.fromName || '',
+            toEmail: tx.to_email || tx.toEmail || '',
+            subject: tx.subject || '',
+            renderedHtml: tx.rendered_html || tx.renderedHtml,
+            renderedText: tx.rendered_text || tx.renderedText,
+            status: tx.status || 'SUBMITTED',
+            providerStatus: tx.provider_status || tx.providerStatus,
+            providerResponse: tx.provider_response || tx.providerResponse,
+            errorCode: tx.error_code || tx.errorCode,
+            errorMessage: tx.error_message || tx.errorMessage,
+            bounceType: tx.bounce_type || tx.bounceType,
+            bounceSubType: tx.bounce_sub_type || tx.bounceSubType,
+            complaintFeedbackType: tx.complaint_feedback_type || tx.complaintFeedbackType,
+            createdAt: tx.createdAt || tx.created_at || new Date().toISOString(),
+            submittedAt: tx.submitted_at || tx.submittedAt,
+            deliveredAt: tx.delivered_at || tx.deliveredAt,
+            bouncedAt: tx.bounced_at || tx.bouncedAt,
+            complainedAt: tx.complained_at || tx.complainedAt
+          }));
+          this.emailTransactions.set(mapped);
+          break;
+        }
+      } catch (e) {}
+    }
+  }
+
+  /**
+   * GET /api/admin/email/pricing-slabs
+   */
+  async fetchEmailPricingSlabs() {
+    const headers = this.getAuthHeaders();
+    const urls = [
+      'https://app.alert21.in/back/api/v1/admin/email/pricing-slabs',
+      'https://app.alert21.in/back/api/admin/email/pricing-slabs'
+    ];
+
+    for (const url of urls) {
+      try {
+        const res = await firstValueFrom(
+          this.http.get<any>(url, { headers }).pipe(catchError(() => of(null)))
+        );
+        const list = Array.isArray(res?.data?.slabs)
+          ? res.data.slabs
+          : (Array.isArray(res?.data?.items)
+              ? res.data.items
+              : (Array.isArray(res?.data)
+                  ? res.data
+                  : (Array.isArray(res?.slabs) ? res.slabs : null)));
+
+        if (list && Array.isArray(list)) {
+          const mapped: EmailPricingSlab[] = list.map((s: any) => ({
+            id: s._id || s.id,
+            name: s.name || 'Tier',
+            minQuantity: s.min_quantity ?? s.minQuantity ?? 1000,
+            maxQuantity: s.max_quantity ?? s.maxQuantity ?? 10000,
+            ratePerEmail: s.rate_per_email ?? s.ratePerEmail ?? 0.15,
+            gstPercent: s.gst_percent ?? s.gstPercent ?? 18,
+            isActive: s.is_active ?? s.isActive ?? true,
+            description: s.description,
+            createdAt: s.createdAt || s.created_at
+          }));
+          this.emailPricingSlabs.set(mapped);
+          break;
+        }
+      } catch (e) {}
+    }
+  }
+
+  /**
+   * POST /api/admin/email/pricing-slabs
+   */
+  async saveEmailPricingSlab(slab: Partial<EmailPricingSlab>): Promise<boolean> {
+    const headers = this.getAuthHeaders();
+    const isEdit = !!slab.id;
+    const payload = {
+      name: slab.name,
+      min_quantity: Number(slab.minQuantity),
+      max_quantity: Number(slab.maxQuantity),
+      rate_per_email: Number(slab.ratePerEmail),
+      gst_percent: Number(slab.gstPercent ?? 18),
+      is_active: slab.isActive ?? true,
+      description: slab.description
+    };
+
+    const url = isEdit
+      ? `https://app.alert21.in/back/api/admin/email/pricing-slabs/${slab.id}`
+      : `https://app.alert21.in/back/api/admin/email/pricing-slabs`;
+
+    try {
+      const res = isEdit
+        ? await firstValueFrom(this.http.put<any>(url, payload, { headers }))
+        : await firstValueFrom(this.http.post<any>(url, payload, { headers }));
+
+      if (res && (res.success || res.data)) {
+        await this.fetchEmailPricingSlabs();
+        this.toastService.showSuccess('Slab Saved', 'Email pricing slab saved successfully.');
+        return true;
+      }
+    } catch (e: any) {
+      const msg = e?.error?.message || e?.message || 'Failed to save email pricing slab';
+      this.toastService.showError('Slab Error', msg);
+    }
+    return false;
+  }
+
+  /**
+   * DELETE /api/admin/email/pricing-slabs/:id
+   */
+  async deleteEmailPricingSlab(id: string): Promise<boolean> {
+    const headers = this.getAuthHeaders();
+    const url = `https://app.alert21.in/back/api/admin/email/pricing-slabs/${id}`;
+    try {
+      const res = await firstValueFrom(this.http.delete<any>(url, { headers }));
+      if (res && res.success) {
+        await this.fetchEmailPricingSlabs();
+        this.toastService.showSuccess('Slab Deleted', 'Email pricing slab removed successfully.');
+        return true;
+      }
+    } catch (e: any) {
+      const msg = e?.error?.message || e?.message || 'Failed to delete slab';
+      this.toastService.showError('Delete Error', msg);
+    }
+    return false;
+  }
+
+  /**
+   * POST /api/admin/users/:userId/email-credit or email-debit
+   */
+  async adjustUserEmailBalance(userId: string, type: 'CREDIT' | 'DEBIT', amount: number, remarks: string): Promise<boolean> {
+    const headers = this.getAuthHeaders();
+    const endpoint = type === 'CREDIT' ? 'email-credit' : 'email-debit';
+    const url = `https://app.alert21.in/back/api/admin/users/${userId}/${endpoint}`;
+    const payload = {
+      amount: Number(amount),
+      remarks: remarks.trim()
+    };
+
+    try {
+      const res = await firstValueFrom(this.http.post<any>(url, payload, { headers }));
+      if (res && res.success) {
+        await this.fetchLiveUsers();
+        this.toastService.showSuccess('Email Balance Updated', `Successfully ${type.toLowerCase()}ed ${amount} email credits.`);
+        return true;
+      }
+    } catch (e: any) {
+      const msg = e?.error?.message || e?.message || `Failed to ${type.toLowerCase()} email balance`;
+      this.toastService.showError('Adjustment Failed', msg);
+    }
+    return false;
+  }
+
+  /**
+   * GET /api/admin/email/bank-transfers
+   */
+  async fetchEmailBankTransfers() {
+    const headers = this.getAuthHeaders();
+    const urls = [
+      'https://app.alert21.in/back/api/admin/email/bank-transfers',
+      'https://app.alert21.in/back/api/v1/admin/email/bank-transfers'
+    ];
+
+    for (const url of urls) {
+      try {
+        const res = await firstValueFrom(
+          this.http.get<any>(url, { headers }).pipe(catchError(() => of(null)))
+        );
+        const list = Array.isArray(res?.data)
+          ? res.data
+          : (Array.isArray(res?.data?.items)
+              ? res.data.items
+              : (Array.isArray(res?.data?.orders)
+                  ? res.data.orders
+                  : (Array.isArray(res?.orders) ? res.orders : null)));
+
+        if (list && Array.isArray(list)) {
+          const mapped = list.map((ord: any) => ({
+            id: ord._id || ord.id,
+            orderNumber: ord.order_number || ord.orderNumber || ord._id,
+            userId: ord.user_id?._id || ord.user_id || '',
+            userName: ord.user_id?.fullName || ord.userName || 'User',
+            userEmail: ord.user_id?.email || ord.userEmail || '',
+            companyName: ord.user_id?.companyName || ord.companyName || '',
+            emailQuantity: ord.email_quantity || ord.emailQuantity || 0,
+            ratePerEmail: ord.rate_per_email || ord.ratePerEmail || 0.15,
+            baseAmount: ord.base_amount ?? ord.baseAmount ?? 0,
+            gstRate: ord.gst_rate ?? ord.gstRate ?? 18,
+            gstAmount: ord.gst_amount ?? ord.gstAmount ?? 0,
+            totalPayable: ord.total_payable ?? ord.totalPayable ?? 0,
+            paymentMethod: ord.payment_method || 'BANK_TRANSFER',
+            paymentStatus: ord.payment_status || 'PENDING',
+            utrNumber: ord.bank_transfer_details?.utr_number || ord.utr_number || ord.utrNumber || 'N/A',
+            paymentProof: ord.bank_transfer_details?.payment_proof || ord.payment_proof || ord.paymentProof || null,
+            adminStatus: ord.bank_transfer_details?.admin_status || ord.admin_status || 'PENDING',
+            adminRemarks: ord.bank_transfer_details?.admin_remarks || ord.admin_remarks || '',
+            createdAt: ord.createdAt || ord.created_at || new Date().toISOString()
+          }));
+          this.emailBankTransfers.set(mapped);
+          break;
+        }
+      } catch (e) {}
+    }
+  }
+
+  /**
+   * POST /api/admin/email/bank-transfers/:id/approve
+   */
+  async approveEmailBankTransfer(id: string, remarks: string = 'Approved by Admin'): Promise<boolean> {
+    const headers = this.getAuthHeaders();
+    const urls = [
+      `https://app.alert21.in/back/api/admin/email/bank-transfers/${id}/approve`,
+      `https://app.alert21.in/back/api/v1/admin/email/bank-transfers/${id}/approve`
+    ];
+
+    for (const url of urls) {
+      try {
+        const res = await firstValueFrom(
+          this.http.post<any>(url, { remarks }, { headers })
+        );
+        if (res && (res.success || res.data)) {
+          await this.fetchEmailBankTransfers();
+          await this.fetchLiveUsers();
+          this.toastService.showSuccess('Order Approved', res.message || 'Email bank transfer approved and credits added.');
+          return true;
+        }
+      } catch (e: any) {
+        const msg = e?.error?.message || e?.message || 'Approval failed';
+        this.toastService.showError('Approval Error', msg);
+        return false;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * POST /api/admin/email/bank-transfers/:id/reject
+   */
+  async rejectEmailBankTransfer(id: string, reason: string): Promise<boolean> {
+    const headers = this.getAuthHeaders();
+    const urls = [
+      `https://app.alert21.in/back/api/admin/email/bank-transfers/${id}/reject`,
+      `https://app.alert21.in/back/api/v1/admin/email/bank-transfers/${id}/reject`
+    ];
+
+    for (const url of urls) {
+      try {
+        const res = await firstValueFrom(
+          this.http.post<any>(url, { reason }, { headers })
+        );
+        if (res && (res.success || res.data)) {
+          await this.fetchEmailBankTransfers();
+          this.toastService.showSuccess('Order Rejected', res.message || 'Email bank transfer marked as rejected.');
+          return true;
+        }
+      } catch (e: any) {
+        const msg = e?.error?.message || e?.message || 'Rejection failed';
+        this.toastService.showError('Rejection Error', msg);
+        return false;
+      }
     }
     return false;
   }

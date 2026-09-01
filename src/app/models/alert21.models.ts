@@ -423,3 +423,144 @@ export interface MonitoringDashboardStats {
     lastFailedAt: string;
   }[];
 }
+
+// =========================================================
+// TASK #06: EMAIL ALERT SERVICE (AMAZON SES) MODELS
+// =========================================================
+
+export interface EmailProvider {
+  id: string;
+  name: string;
+  code: string;
+  region: string;
+  accessKeyId: string;
+  secretAccessKeyMasked: string;
+  secretAccessKey?: string;
+  configurationSet?: string;
+  callbackSecret?: string;
+  status: 'ACTIVE' | 'INACTIVE';
+  isDefault: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type EmailDomainStatus = 'PENDING_DNS' | 'VERIFYING' | 'VERIFIED' | 'FAILED' | 'SUSPENDED';
+
+export interface DnsRecordItem {
+  recordType: 'CNAME' | 'TXT' | 'MX';
+  name: string;
+  value: string;
+  status?: 'PENDING' | 'VERIFIED' | 'FAILED';
+}
+
+export interface EmailSendingDomain {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  domain: string;
+  status: EmailDomainStatus;
+  dkimTokens: string[];
+  dnsRecords: DnsRecordItem[];
+  customMailFromDomain?: string;
+  customMailFromStatus?: string;
+  verifiedAt?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface EmailSender {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  domainId: string;
+  domainName: string;
+  fromName: string;
+  fromEmail: string;
+  replyToEmail?: string;
+  status: 'ACTIVE' | 'INACTIVE';
+  createdAt: string;
+}
+
+export interface EmailTemplate {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  name: string;
+  subject: string;
+  htmlBody: string;
+  plainTextBody?: string;
+  variables: string[];
+  status: 'DRAFT' | 'ACTIVE' | 'INACTIVE';
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export type EmailTransactionStatus = 'SUBMITTED' | 'DELIVERED' | 'BOUNCED' | 'COMPLAINT' | 'FAILED' | 'PENDING';
+
+export interface EmailTransaction {
+  id: string;
+  transactionId: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  providerId?: string;
+  providerName?: string;
+  providerMessageId?: string;
+  domainId?: string;
+  domainName?: string;
+  senderId?: string;
+  fromEmail: string;
+  fromName: string;
+  toEmail: string;
+  subject: string;
+  renderedHtml?: string;
+  renderedText?: string;
+  status: EmailTransactionStatus;
+  providerStatus?: string;
+  providerResponse?: any;
+  errorCode?: string;
+  errorMessage?: string;
+  bounceType?: string;
+  bounceSubType?: string;
+  complaintFeedbackType?: string;
+  createdAt: string;
+  submittedAt?: string;
+  deliveredAt?: string;
+  bouncedAt?: string;
+  complainedAt?: string;
+}
+
+export interface EmailPricingSlab {
+  id: string;
+  name: string;
+  minQuantity: number;
+  maxQuantity: number;
+  ratePerEmail: number;
+  gstPercent: number;
+  isActive: boolean;
+  description?: string;
+  createdAt?: string;
+}
+
+export interface EmailDashboardStats {
+  totalCreditsDistributed: number;
+  currentTotalUserBalance: number;
+  totalEmailsSold: number;
+  totalEmailsSent: number;
+  deliveredEmails: number;
+  bouncedEmails: number;
+  complaintCount: number;
+  verifiedDomainsCount: number;
+  activeTemplatesCount: number;
+  totalBillingValue: number;
+  gstCollected: number;
+  avgSellingPricePerEmail: number;
+  totalPaymentReceived: number;
+  deliveryRatePercent: number;
+  bounceRatePercent: number;
+  complaintRatePercent: number;
+}
+

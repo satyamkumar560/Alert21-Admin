@@ -29,6 +29,16 @@ import { MonitoringSubscriptionsComponent } from './components/monitoring/monito
 import { MonitoringSourcesComponent } from './components/monitoring/monitoring-sources.component';
 import { MonitoringTemplatesComponent } from './components/monitoring/monitoring-templates.component';
 
+// Task #06: Email Alert Service (Amazon SES)
+import { EmailDashboardComponent } from './components/email/email-dashboard.component';
+import { EmailProvidersComponent } from './components/email/email-providers.component';
+import { EmailDomainsComponent } from './components/email/email-domains.component';
+import { EmailSendersComponent } from './components/email/email-senders.component';
+import { EmailTemplatesComponent } from './components/email/email-templates.component';
+import { EmailLogsComponent } from './components/email/email-logs.component';
+import { EmailPricingComponent } from './components/email/email-pricing.component';
+import { EmailReputationComponent } from './components/email/email-reputation.component';
+
 import { ToastComponent } from './components/shared/toast.component';
 
 @Component({
@@ -51,6 +61,14 @@ import { ToastComponent } from './components/shared/toast.component';
     MonitoringSubscriptionsComponent,
     MonitoringSourcesComponent,
     MonitoringTemplatesComponent,
+    EmailDashboardComponent,
+    EmailProvidersComponent,
+    EmailDomainsComponent,
+    EmailSendersComponent,
+    EmailTemplatesComponent,
+    EmailLogsComponent,
+    EmailPricingComponent,
+    EmailReputationComponent,
     DltApprovalsComponent,
     SenderIdsComponent,
     DltTemplatesComponent,
@@ -108,6 +126,16 @@ import { ToastComponent } from './components/shared/toast.component';
             <app-monitoring-subscriptions *ngIf="activeTab === 'monitoring-subscriptions'"></app-monitoring-subscriptions>
             <app-monitoring-sources *ngIf="activeTab === 'monitoring-sources'"></app-monitoring-sources>
             <app-monitoring-templates *ngIf="activeTab === 'monitoring-templates'"></app-monitoring-templates>
+
+            <!-- Task #06: Email Alert Service Components -->
+            <app-email-dashboard *ngIf="activeTab === 'email-dashboard'" (navigate)="onTabChange($event)"></app-email-dashboard>
+            <app-email-providers *ngIf="activeTab === 'email-providers'"></app-email-providers>
+            <app-email-domains *ngIf="activeTab === 'email-domains'"></app-email-domains>
+            <app-email-senders *ngIf="activeTab === 'email-senders'"></app-email-senders>
+            <app-email-templates *ngIf="activeTab === 'email-templates'"></app-email-templates>
+            <app-email-logs *ngIf="activeTab === 'email-logs'"></app-email-logs>
+            <app-email-pricing *ngIf="activeTab === 'email-pricing'"></app-email-pricing>
+            <app-email-reputation *ngIf="activeTab === 'email-reputation'"></app-email-reputation>
 
             <!-- DLT & Gateway Components -->
             <app-dlt-approvals *ngIf="activeTab === 'dlt-pe'"></app-dlt-approvals>

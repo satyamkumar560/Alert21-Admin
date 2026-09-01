@@ -222,6 +222,7 @@ export class BillingDashboardComponent implements OnInit {
     this.dataService.fetchLivePricingSlabs();
     this.dataService.fetchLiveBankTransfers();
     this.dataService.fetchMonitoringBankTransfers();
+    this.dataService.fetchEmailBankTransfers();
   }
 
   stats() {
@@ -229,14 +230,17 @@ export class BillingDashboardComponent implements OnInit {
     const allUsers = this.dataService.users();
     const allTransfers = this.dataService.bankTransfers();
     const allMonTransfers = this.dataService.monitoringBankTransfers();
+    const allEmailTransfers = this.dataService.emailBankTransfers();
 
     const approved = allTransfers.filter(t => t.purchaseStatus === 'APPROVED');
     const pendingSms = allTransfers.filter(t => t.purchaseStatus === 'PENDING');
     const pendingMon = allMonTransfers.filter(t => t.adminStatus === 'PENDING');
+    const pendingEmail = allEmailTransfers.filter(t => t.adminStatus === 'PENDING');
 
-    const pendingCount = pendingSms.length + pendingMon.length;
+    const pendingCount = pendingSms.length + pendingMon.length + pendingEmail.length;
     const pendingAmt = pendingSms.reduce((sum, t) => sum + (t.totalAmount || 0), 0) + 
-                       pendingMon.reduce((sum, t) => sum + (t.totalPayable || 0), 0);
+                       pendingMon.reduce((sum, t) => sum + (t.totalPayable || 0), 0) +
+                       pendingEmail.reduce((sum, t) => sum + (t.totalPayable || 0), 0);
 
     const totalSold = approved.reduce((sum, t) => sum + (t.smsQuantity || 0), 0);
     const totalBilling = approved.reduce((sum, t) => sum + (t.baseAmount || 0), 0);
@@ -244,23 +248,15 @@ export class BillingDashboardComponent implements OnInit {
     const totalPaid = approved.reduce((sum, t) => sum + (t.totalAmount || 0), 0);
     const userBalance = allUsers.reduce((sum, u) => sum + (u.smsBalance || 0), 0);
 
-    if (live) {
-      return {
-        ...live,
-        pendingBankTransferCount: pendingCount > 0 ? pendingCount : (live.pendingBankTransferCount || 0),
-        pendingBankTransferAmount: pendingAmt > 0 ? pendingAmt : (live.pendingBankTransferAmount || 0),
-        currentTotalUserSmsBalance: live.currentTotalUserSmsBalance || userBalance
-      };
-    }
-
     return {
-      totalSmsDistributed: totalSold + userBalance,
-      currentTotalUserSmsBalance: userBalance,
-      totalSmsSold: totalSold,
-      totalBillingValue: totalBilling,
-      gstCollected: totalGst,
-      averageSellingPricePerSms: totalSold > 0 ? totalBilling / totalSold : 0.22,
-      totalPaymentReceived: totalPaid,
+      ...(live || {}),
+      totalSmsDistributed: live?.totalSmsDistributed || (totalSold + userBalance),
+      currentTotalUserSmsBalance: live?.currentTotalUserSmsBalance || userBalance,
+      totalSmsSold: live?.totalSmsSold || totalSold,
+      totalBillingValue: live?.totalBillingValue || totalBilling,
+      gstCollected: live?.gstCollected || totalGst,
+      averageSellingPricePerSms: live?.averageSellingPricePerSms || (totalSold > 0 ? totalBilling / totalSold : 0.222),
+      totalPaymentReceived: live?.totalPaymentReceived || totalPaid,
       pendingBankTransferCount: pendingCount,
       pendingBankTransferAmount: pendingAmt
     };
