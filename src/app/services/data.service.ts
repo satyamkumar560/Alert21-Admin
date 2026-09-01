@@ -684,29 +684,33 @@ export class DataService {
       });
 
       const response = await firstValueFrom(
-        this.http.get<any>('https://app.alert21.in/back/api/admin/sms-logs', { headers })
+        this.http.get<any>('https://app.alert21.in/back/api/admin/sms-logs?limit=100', { headers })
       );
 
-      if (response && response.success && Array.isArray(response.data)) {
-        const mappedLogs: ProviderRequestLog[] = response.data.map((item: any) => ({
+      const items = Array.isArray(response?.data?.items)
+        ? response.data.items
+        : (Array.isArray(response?.data) ? response.data : (Array.isArray(response?.items) ? response.items : null));
+
+      if (items && Array.isArray(items)) {
+        const mappedLogs: ProviderRequestLog[] = items.map((item: any) => ({
           id: item._id,
-          transactionId: item.transaction_id || item._id,
-          userId: item.user_id?._id || '',
-          userName: item.user_id?.fullName || 'User',
-          providerId: item.provider_id || '',
-          providerName: item.provider_name || 'MSG24',
-          peId: item.principal_entity_id || '',
-          senderHeader: item.sender_id || '',
-          templateId: item.template_id || '',
-          dltTelemarketerIdSha256: item.telemarketer_id_hash || '',
+          transactionId: item.transaction_id || item.transactionId || item._id,
+          userId: item.user_id?._id || item.user_id?.account_id || item.user_id || '',
+          userName: item.user_id?.fullName || item.userName || 'User',
+          providerId: item.provider_id?._id || item.provider_id || '',
+          providerName: item.provider_id?.name || item.provider_name || 'MSG24',
+          peId: item.principal_entity_id || item.peId || '',
+          senderHeader: item.sender_id || item.senderHeader || '',
+          templateId: item.template_id || item.templateId || '',
+          dltTelemarketerIdSha256: item.telemarketer_id_hash || item.dltTelemarketerIdSha256 || '',
           recipientMobileMasked: item.recipient_masked || item.recipient || 'XXXXXX0000',
-          messageContentHash: item.message_hash || '',
-          requestUrlMasked: item.request_url || '',
-          httpStatus: item.http_status || 200,
-          latencyMs: item.latency_ms || 0,
-          normalizedStatus: item.status || 'SUCCESS',
-          rawProviderResponse: item.provider_response || '',
-          timestamp: item.created_at || new Date().toISOString()
+          messageContentHash: item.message_hash || item.messageContentHash || '',
+          requestUrlMasked: item.request_url || item.requestUrlMasked || '',
+          httpStatus: item.http_status || item.httpStatus || 200,
+          latencyMs: item.latency_ms ?? item.latencyMs ?? 0,
+          normalizedStatus: item.status || item.normalizedStatus || 'SUCCESS',
+          rawProviderResponse: item.provider_response || item.rawProviderResponse || '',
+          timestamp: item.created_at || item.createdAt || new Date().toISOString()
         }));
         this.providerLogs.set(mappedLogs);
       }
