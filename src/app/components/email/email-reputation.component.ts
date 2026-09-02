@@ -12,9 +12,9 @@ import { IconComponent } from '../shared/icon.component';
       <!-- Header -->
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 class="text-2xl font-black text-slate-900 tracking-tight">Amazon SES Reputation & Health</h2>
+          <h2 class="text-2xl font-black text-slate-900 tracking-tight">Email Reputation & Health</h2>
           <p class="text-xs text-slate-500 font-medium mt-0.5">
-            Monitor ISP delivery thresholds, bounce telemetry, and spam complaints to prevent Amazon SES sending suspension.
+            Monitor ISP delivery thresholds, bounce telemetry, and spam complaints to ensure high email deliverability.
           </p>
         </div>
 

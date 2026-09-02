@@ -431,14 +431,14 @@ export type NavTab =
           <span>Email Dashboard</span>
         </button>
 
-        <!-- Email Providers (SES) -->
+        <!-- Email Providers -->
         <button
           type="button"
           (click)="onSelectTab('email-providers')"
           [ngClass]="getNavClass('email-providers')"
           class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all">
           <app-icon name="server" [size]="16"></app-icon>
-          <span>Email Providers (SES)</span>
+          <span>Email Providers</span>
         </button>
 
         <!-- Sending Domains -->

@@ -438,6 +438,7 @@ export interface EmailProvider {
   secretAccessKey?: string;
   configurationSet?: string;
   callbackSecret?: string;
+  callbackUrl?: string;
   status: 'ACTIVE' | 'INACTIVE';
   isDefault: boolean;
   createdAt?: string;

@@ -2216,6 +2216,7 @@ export class DataService {
         );
         if (res && (res.success || res.data)) {
           this.toastService.showSuccess('Alert Dispatched', `Re-sent alert for incident via ${channel}.`);
+          await this.fetchGlobalIncidents();
           return true;
         }
       } catch (e) {}
@@ -2409,6 +2410,7 @@ export class DataService {
             secretAccessKeyMasked: p.secret_access_key_masked || p.secretAccessKeyMasked || '••••••••••••••••',
             configurationSet: p.configuration_set || p.configurationSet,
             callbackSecret: p.callback_secret || p.callbackSecret,
+            callbackUrl: p.callback_url || p.callbackUrl || 'https://app.alert21.in/back/api/v1/email/callback/aws-ses',
             status: p.status || 'ACTIVE',
             isDefault: p.is_default ?? p.isDefault ?? true,
             createdAt: p.createdAt || p.created_at,
