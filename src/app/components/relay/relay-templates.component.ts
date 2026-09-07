@@ -129,7 +129,7 @@ import { NavTab } from '../layout/sidebar.component';
                   <span class="text-[10px] font-bold text-slate-400 uppercase">Mapped Variables ({{ variant.variables.length }})</span>
                   <div class="flex flex-wrap gap-1.5 mt-1">
                     <span *ngFor="let vm of variant.variables" class="px-2 py-0.5 rounded bg-indigo-50 border border-indigo-200 text-indigo-700 font-mono text-[10px] font-bold">
-                      {{'{{' + vm.variableKey + '}}'}}
+                      {{'{{' + (vm.variableKey || vm.key || vm.name || 'var') + '}}'}}
                     </span>
                   </div>
                 </div>

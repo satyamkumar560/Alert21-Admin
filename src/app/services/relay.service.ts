@@ -104,9 +104,9 @@ export class RelayService {
         if (sndRes && sndRes.success && Array.isArray(sndRes.data)) {
           this.senders.set(sndRes.data.map((snd: any) => ({
             id: snd._id || snd.id,
-            sourceId: snd.source_id,
-            sourceCode: snd.source_code,
-            sourceName: snd.source_name,
+            sourceId: typeof snd.source_id === 'object' && snd.source_id !== null ? (snd.source_id._id || snd.source_id.id) : (snd.source_id || ''),
+            sourceCode: snd.source_code || (typeof snd.source_id === 'object' ? snd.source_id?.source_code : ''),
+            sourceName: snd.source_name || (typeof snd.source_id === 'object' ? snd.source_id?.name : ''),
             senderValue: snd.sender_value,
             aliasGroup: snd.alias_group || '',
             matchMode: snd.match_mode || 'EXACT',
@@ -173,7 +173,13 @@ export class RelayService {
               patternRegex: v.pattern_regex || '',
               checksum: v.checksum || 'sha256:live',
               senderIds: v.sender_ids || v.sender_aliases || [],
-              variables: v.variables || [],
+              variables: (v.variables || []).map((vm: any) => ({
+                variableKey: vm.key || vm.variableKey || vm.name || 'var',
+                variableName: vm.name || vm.variableName || vm.key || 'Variable',
+                dataType: vm.data_type || vm.dataType || 'string',
+                sensitivity: vm.sensitivity || 'NORMAL',
+                sampleValue: vm.sample_value || vm.sampleValue || ''
+              })),
               rawMessagePolicy: v.raw_message_policy || 'DISABLED',
               status: v.status || 'PUBLISHED',
               publishedAt: v.published_at || v.createdAt,
@@ -190,7 +196,13 @@ export class RelayService {
                 patternRegex: m.pattern_regex || '',
                 checksum: 'sha256:live',
                 senderIds: m.sender_aliases || [],
-                variables: m.variables || [],
+                variables: (m.variables || []).map((vm: any) => ({
+                  variableKey: vm.key || vm.variableKey || vm.name || 'var',
+                  variableName: vm.name || vm.variableName || vm.key || 'Variable',
+                  dataType: vm.data_type || vm.dataType || 'string',
+                  sensitivity: vm.sensitivity || 'NORMAL',
+                  sampleValue: vm.sample_value || vm.sampleValue || ''
+                })),
                 rawMessagePolicy: 'DISABLED',
                 status: 'PUBLISHED',
                 publishedAt: m.updatedAt || m.createdAt,
@@ -564,6 +576,21 @@ export class RelayService {
   }): Promise<{ messageType: RelayMessageType; variant: RelayTemplateVariant } | null> {
     try {
       const headers = this.getAuthHeaders();
+      const formattedVariables = (params.variables || []).map((v: any) => ({
+        key: v.variableKey || v.key,
+        variableKey: v.variableKey || v.key,
+        name: v.variableName || v.displayName || v.name || v.key || v.variableKey,
+        variableName: v.variableName || v.displayName || v.name || v.key || v.variableKey,
+        data_type: v.dataType || v.data_type || 'string',
+        dataType: v.dataType || v.data_type || 'string',
+        sensitivity: v.sensitivity || 'NORMAL',
+        sample_value: v.sampleValue || v.sample_value || '',
+        sampleValue: v.sampleValue || v.sample_value || '',
+        token_index: v.tokenIndex ?? v.token_index ?? 0,
+        tokenIndex: v.tokenIndex ?? v.token_index ?? 0,
+        required: v.required ?? true
+      }));
+
       const res = await firstValueFrom(this.http.post<any>(`${this.baseUrl}/message-types`, {
         source_id: params.sourceId,
         source_code: params.sourceCode,
@@ -574,7 +601,7 @@ export class RelayService {
         sender_aliases: params.senderIds,
         sample_template: params.sampleSmsText,
         pattern_regex: params.patternRegex,
-        variables: params.variables
+        variables: formattedVariables
       }, { headers }));
 
       if (res && res.success && res.data) {

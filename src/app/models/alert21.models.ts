@@ -883,6 +883,8 @@ export interface RelayVariable {
 export interface RelayTemplateVariableMapping {
   variableKey: string;
   variableName: string;
+  key?: string;
+  name?: string;
   dataType: RelayVariableDataType;
   sensitivity: RelayVariableSensitivity;
   sampleValue: string;

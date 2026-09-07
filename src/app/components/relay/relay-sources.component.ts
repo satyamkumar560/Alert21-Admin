@@ -116,10 +116,21 @@ import { RelaySource, RelaySender, RelaySourceType, RelaySenderMatchMode } from 
                 </td>
                 <td class="py-3.5 px-4">
                   <div class="flex items-center gap-1.5 flex-wrap">
-                    <span *ngFor="let s of getSendersForSource(src.id)" class="px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-700 font-mono text-[10px] font-bold">
-                      {{ s.senderValue }}
-                    </span>
-                    <button (click)="openAddSenderModal(src)" class="text-[10px] text-indigo-600 hover:underline font-bold">+ Map</button>
+                    <!-- If a sender is mapped: Show single sender badge with delete/edit -->
+                    <ng-container *ngIf="getSendersForSource(src).length > 0">
+                      <div *ngFor="let s of getSendersForSource(src)" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-700 font-mono text-xs font-extrabold shadow-sm group">
+                        <span>{{ s.senderValue }}</span>
+                        <button (click)="deleteSenderDirect(s, $event)" title="Delete / Change Sender" class="text-indigo-400 hover:text-rose-600 transition-colors p-0.5 rounded hover:bg-rose-50">
+                          <app-icon name="x" [size]="12"></app-icon>
+                        </button>
+                      </div>
+                    </ng-container>
+
+                    <!-- If no sender mapped yet: Show + Map Sender button -->
+                    <button *ngIf="getSendersForSource(src).length === 0" (click)="openAddSenderModal(src)" class="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold transition-all flex items-center gap-1">
+                      <app-icon name="plus" [size]="12"></app-icon>
+                      <span>Map Sender</span>
+                    </button>
                   </div>
                 </td>
                 <td class="py-3.5 px-4">
@@ -347,8 +358,14 @@ export class RelaySourcesComponent {
     });
   }
 
-  getSendersForSource(sourceId: string): RelaySender[] {
-    return this.relayService.senders().filter(s => s.sourceId === sourceId);
+  getSendersForSource(source: RelaySource | string): RelaySender[] {
+    const srcId = typeof source === 'string' ? source : source.id;
+    const srcCode = typeof source === 'string' ? '' : (source.sourceCode || '').toUpperCase();
+    return this.relayService.senders().filter(s => {
+      if (s.sourceId && s.sourceId === srcId) return true;
+      if (srcCode && s.sourceCode && s.sourceCode.toUpperCase() === srcCode) return true;
+      return false;
+    });
   }
 
   getSourceTypeBadgeClass(type: RelaySourceType): string {
@@ -412,9 +429,25 @@ export class RelaySourcesComponent {
     }
   }
 
-  saveSender() {
+  async saveSender() {
     if (!this.senderForm.sourceId || !this.senderForm.senderValue.trim()) return;
-    this.relayService.addSender(this.senderForm);
+    
+    // If source already has an existing sender mapped, remove the old one first so only single sender remains
+    const existingSenders = this.getSendersForSource(this.senderForm.sourceId);
+    if (existingSenders.length > 0) {
+      for (const oldSender of existingSenders) {
+        await this.relayService.deleteSender(oldSender.id);
+      }
+    }
+
+    await this.relayService.addSender(this.senderForm);
     this.showSenderModal = false;
+  }
+
+  deleteSenderDirect(sender: RelaySender, event: Event) {
+    event.stopPropagation();
+    if (confirm(`Remove sender ID "${sender.senderValue}"?`)) {
+      this.relayService.deleteSender(sender.id);
+    }
   }
 }

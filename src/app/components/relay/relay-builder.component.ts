@@ -159,8 +159,18 @@ interface TokenItem {
             <!-- Interactive Clickable Tokens Bar -->
             <div class="p-3.5 bg-slate-900 text-white rounded-xl space-y-2">
               <div class="flex items-center justify-between text-[11px] text-slate-400 font-bold uppercase tracking-wider">
-                <span>Interactive Token Map</span>
-                <span class="text-indigo-400 font-mono">{{ variableMappings.length }} variables mapped</span>
+                <div class="flex items-center gap-2">
+                  <span>Interactive Token Map</span>
+                  <span *ngIf="selectedTokenIndices.length > 0" class="px-2 py-0.5 rounded-full bg-indigo-500 text-white text-[10px] font-bold font-mono">
+                    {{ selectedTokenIndices.length }} tokens selected
+                  </span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <button *ngIf="selectedTokenIndices.length > 0" (click)="clearSelection()" class="text-[10px] text-slate-400 hover:text-white underline">
+                    Clear selection
+                  </button>
+                  <span class="text-indigo-400 font-mono">{{ variableMappings.length }} variables mapped</span>
+                </div>
               </div>
 
               <div class="flex flex-wrap gap-1.5 pt-1 min-h-[48px] items-center">
@@ -169,9 +179,11 @@ interface TokenItem {
                   <button 
                     *ngIf="!token.isVariable"
                     type="button" 
-                    (click)="openTokenVariableSelector(token)"
-                    class="px-2 py-1 rounded bg-slate-800 hover:bg-indigo-600 hover:text-white text-slate-200 text-xs font-mono transition-all border border-slate-700">
-                    {{ token.text }}
+                    (click)="toggleTokenSelection(token)"
+                    [class]="isTokenSelected(token) ? 'bg-indigo-600 text-white border-indigo-400 ring-2 ring-indigo-400 shadow-md font-bold' : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'"
+                    class="px-2.5 py-1 rounded-lg text-xs font-mono transition-all border flex items-center gap-1 cursor-pointer select-none">
+                    <span *ngIf="isTokenSelected(token)" class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+                    <span>{{ token.text }}</span>
                   </button>
 
                   <!-- Token mapped as Variable Chip -->
@@ -186,24 +198,31 @@ interface TokenItem {
                   </div>
                 </ng-container>
               </div>
+
+              <div *ngIf="tokens.length > 0 && selectedTokenIndices.length === 0 && !activeSelectingToken" class="pt-1 text-[10px] text-slate-400 font-medium">
+                💡 <span class="text-slate-300 font-semibold">Tip:</span> Click single or multiple words above (e.g. <span class="text-indigo-300 font-mono">"GST" + "Portal"</span>), then pick a variable to bind!
+              </div>
             </div>
 
             <!-- Token Variable Selection Modal/Popdown -->
-            <div *ngIf="activeSelectingToken" class="p-4 bg-indigo-50/70 border border-indigo-200 rounded-xl space-y-3 animate-fade-in">
+            <div *ngIf="selectedTokenIndices.length > 0 || activeSelectingToken" class="p-4 bg-indigo-50/70 border border-indigo-200 rounded-xl space-y-3 animate-fade-in">
               <div class="flex items-center justify-between">
-                <span class="text-xs font-bold text-indigo-900">
-                  Assign variable to token: <strong class="px-2 py-0.5 rounded bg-white font-mono text-indigo-700 border border-indigo-200">"{{ activeSelectingToken.text }}"</strong>
+                <span class="text-xs font-bold text-indigo-900 flex items-center gap-1.5 flex-wrap">
+                  Assign variable to selected text: 
+                  <strong class="px-2 py-0.5 rounded bg-white font-mono text-indigo-700 border border-indigo-200 shadow-sm">
+                    "{{ getSelectedTokensText() }}"
+                  </strong>
                 </span>
-                <button (click)="activeSelectingToken = null" class="text-slate-400 hover:text-slate-600">
+                <button (click)="clearSelection()" class="text-slate-400 hover:text-slate-600 p-1">
                   <app-icon name="x" [size]="14"></app-icon>
                 </button>
               </div>
 
-              <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-60 overflow-y-auto pr-1">
                 <button 
                   *ngFor="let v of relayService.variables()" 
-                  (click)="assignVariableToToken(v)"
-                  class="px-3 py-2 rounded-xl bg-white border border-indigo-100 hover:border-indigo-500 hover:bg-indigo-600 hover:text-white text-left transition-all group">
+                  (click)="assignVariableToSelectedTokens(v)"
+                  class="px-3 py-2 rounded-xl bg-white border border-indigo-100 hover:border-indigo-500 hover:bg-indigo-600 hover:text-white text-left transition-all group shadow-sm">
                   <span class="block font-mono text-xs font-extrabold text-indigo-700 group-hover:text-white">{{'{{' + v.key + '}}'}}</span>
                   <span class="block text-[10px] text-slate-500 group-hover:text-indigo-100 truncate">{{ v.displayName }}</span>
                 </button>
@@ -312,6 +331,7 @@ export class RelayBuilderComponent implements OnInit {
   tokens: TokenItem[] = [];
   variableMappings: RelayTemplateVariableMapping[] = [];
   activeSelectingToken: TokenItem | null = null;
+  selectedTokenIndices: number[] = [];
   compiledRegex = '';
 
   testSenderInput = '';
@@ -364,6 +384,7 @@ export class RelayBuilderComponent implements OnInit {
   tokenizeSms() {
     if (!this.sampleSmsText) {
       this.tokens = [];
+      this.selectedTokenIndices = [];
       this.compiledRegex = '';
       return;
     }
@@ -381,42 +402,109 @@ export class RelayBuilderComponent implements OnInit {
       };
     });
 
+    this.selectedTokenIndices = [];
+    this.activeSelectingToken = null;
     this.buildCompiledRegex();
   }
 
-  openTokenVariableSelector(token: TokenItem) {
-    this.activeSelectingToken = token;
+  toggleTokenSelection(token: TokenItem) {
+    if (token.isVariable) return;
+
+    if (this.selectedTokenIndices.includes(token.index)) {
+      this.selectedTokenIndices = this.selectedTokenIndices.filter(i => i !== token.index);
+    } else {
+      this.selectedTokenIndices = [...this.selectedTokenIndices, token.index].sort((a, b) => a - b);
+    }
+
+    if (this.selectedTokenIndices.length > 0) {
+      this.activeSelectingToken = this.tokens[this.selectedTokenIndices[0]];
+    } else {
+      this.activeSelectingToken = null;
+    }
   }
 
-  assignVariableToToken(variable: RelayVariable) {
-    if (!this.activeSelectingToken) return;
-    const token = this.activeSelectingToken;
+  isTokenSelected(token: TokenItem): boolean {
+    return this.selectedTokenIndices.includes(token.index);
+  }
 
-    // Remove any existing mapping on this token
-    this.variableMappings = this.variableMappings.filter(m => m.tokenIndex !== token.index);
+  clearSelection() {
+    this.selectedTokenIndices = [];
+    this.activeSelectingToken = null;
+  }
 
-    // Clean sample value (remove trailing dots/colons)
-    const cleanSample = token.text.replace(/[.,:;]$/, '');
+  getSelectedTokensText(): string {
+    if (this.selectedTokenIndices.length > 0) {
+      return this.selectedTokenIndices.map(i => this.tokens[i]?.text).filter(Boolean).join(' ');
+    }
+    return this.activeSelectingToken ? this.activeSelectingToken.text : '';
+  }
 
+  openTokenVariableSelector(token: TokenItem) {
+    this.toggleTokenSelection(token);
+  }
+
+  assignVariableToSelectedTokens(variable: RelayVariable) {
+    if (this.selectedTokenIndices.length === 0 && this.activeSelectingToken) {
+      this.selectedTokenIndices = [this.activeSelectingToken.index];
+    }
+    if (this.selectedTokenIndices.length === 0) return;
+
+    const indices = [...this.selectedTokenIndices].sort((a, b) => a - b);
+    const selectedTokens = indices.map(i => this.tokens[i]).filter(Boolean);
+    const combinedText = selectedTokens.map(t => t.text).join(' ');
+    const cleanSample = combinedText.replace(/[.,:;]$/, '');
+
+    // Remove any existing variable mappings for all selected token indices
+    this.variableMappings = this.variableMappings.filter(m => m.tokenIndex !== undefined && !indices.includes(m.tokenIndex));
+
+    // Assign to the first token in the contiguous selection
+    const primaryToken = selectedTokens[0];
     const newMapping: RelayTemplateVariableMapping = {
       variableKey: variable.key,
       variableName: variable.displayName,
       dataType: variable.dataType,
       sensitivity: variable.sensitivity,
       sampleValue: cleanSample,
-      tokenIndex: token.index,
+      tokenIndex: primaryToken.index,
       required: true
     };
 
     this.variableMappings.push(newMapping);
 
-    token.isVariable = true;
-    token.variableKey = variable.key;
-    token.variableName = variable.displayName;
-    token.sensitivity = variable.sensitivity;
+    // If multiple words were selected, combine them into the primary token and remove the subsequent tokens
+    if (selectedTokens.length > 1) {
+      primaryToken.text = combinedText;
+      primaryToken.isVariable = true;
+      primaryToken.variableKey = variable.key;
+      primaryToken.variableName = variable.displayName;
+      primaryToken.sensitivity = variable.sensitivity;
 
+      // Filter out subsequent tokens from this.tokens array and re-index
+      const subsequentIndices = indices.slice(1);
+      this.tokens = this.tokens.filter(t => !subsequentIndices.includes(t.index));
+      // Re-index remaining tokens and update mapping indices
+      this.tokens.forEach((t, newIdx) => {
+        const oldIdx = t.index;
+        t.index = newIdx;
+        const map = this.variableMappings.find(m => m.tokenIndex === oldIdx);
+        if (map) {
+          map.tokenIndex = newIdx;
+        }
+      });
+    } else {
+      primaryToken.isVariable = true;
+      primaryToken.variableKey = variable.key;
+      primaryToken.variableName = variable.displayName;
+      primaryToken.sensitivity = variable.sensitivity;
+    }
+
+    this.selectedTokenIndices = [];
     this.activeSelectingToken = null;
     this.buildCompiledRegex();
+  }
+
+  assignVariableToToken(variable: RelayVariable) {
+    this.assignVariableToSelectedTokens(variable);
   }
 
   removeTokenVariable(token: TokenItem) {
@@ -443,7 +531,7 @@ export class RelayBuilderComponent implements OnInit {
         } else if (t.variableKey === 'amount' || t.variableKey === 'balance') {
           parts.push('([\\d,]+\\.\\d{2})');
         } else {
-          parts.push('([A-Za-z0-9_-]+)');
+          parts.push('([A-Za-z0-9_\\s-]+)');
         }
       } else {
         // Escape special regex chars
@@ -658,6 +746,8 @@ export class RelayBuilderComponent implements OnInit {
     this.sampleSmsText = '';
     this.tokens = [];
     this.variableMappings = [];
+    this.selectedTokenIndices = [];
+    this.activeSelectingToken = null;
     this.compiledRegex = '';
     this.testResult = null;
   }
