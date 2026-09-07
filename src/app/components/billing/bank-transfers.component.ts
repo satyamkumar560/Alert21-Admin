@@ -18,7 +18,7 @@ import { IconComponent } from '../shared/icon.component';
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight">Bank Transfer Requests</h2>
-          <p class="text-xs text-slate-500 font-medium">Review, verify UTR reference numbers, and approve offline SMS, Website Monitoring, and Email Credit payments.</p>
+          <p class="text-xs text-slate-500 font-medium">Review, verify UTR reference numbers, and approve offline SMS, Website Monitoring, Email, and WhatsApp Credit payments.</p>
         </div>
 
         <button (click)="refreshAll()" class="btn btn-outline shadow-sm flex items-center gap-2">
@@ -27,10 +27,51 @@ import { IconComponent } from '../shared/icon.component';
         </button>
       </div>
 
+      <!-- Manual Payment Master Switch & Permissions Banner -->
+      <div class="bg-white border rounded-2xl p-4 sm:p-5 shadow-sm transition-all"
+        [ngClass]="dataService.paymentSettings().allow_manual_payment ? 'border-emerald-200 bg-emerald-50/20' : 'border-amber-200 bg-amber-50/30'">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div class="flex items-start sm:items-center gap-3.5">
+            <div class="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 shadow-sm"
+              [ngClass]="dataService.paymentSettings().allow_manual_payment ? 'bg-emerald-500 text-white shadow-emerald-500/20' : 'bg-amber-500 text-white shadow-amber-500/20'">
+              <app-icon [name]="dataService.paymentSettings().allow_manual_payment ? 'check-circle' : 'shield'" [size]="22"></app-icon>
+            </div>
+            <div>
+              <div class="flex items-center gap-2 flex-wrap">
+                <h3 class="text-sm font-extrabold text-slate-900">User Manual / Bank Transfer Gateway Option</h3>
+                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider"
+                  [ngClass]="dataService.paymentSettings().allow_manual_payment ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'">
+                  {{ dataService.paymentSettings().allow_manual_payment ? 'Enabled for Users' : 'Disabled for Users' }}
+                </span>
+              </div>
+              <p class="text-xs text-slate-500 mt-1">
+                {{ dataService.paymentSettings().allow_manual_payment 
+                  ? 'Users can view offline bank account details and submit UTR receipts across WhatsApp, SMS, Email & Monitoring billing pages.' 
+                  : 'Manual / Bank Transfer payment options are completely HIDDEN across all user billing pages. Users can only pay via automated gateways.' }}
+              </p>
+            </div>
+          </div>
+
+          <!-- Master Action Toggle Button -->
+          <div class="flex items-center gap-2 shrink-0">
+            <button
+              (click)="toggleManualPaymentSetting('allow_manual_payment')"
+              [disabled]="isTogglingManualPayment"
+              class="px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-sm disabled:opacity-50"
+              [ngClass]="dataService.paymentSettings().allow_manual_payment 
+                ? 'bg-rose-600 hover:bg-rose-700 text-white shadow-rose-600/20' 
+                : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20'">
+              <app-icon [name]="dataService.paymentSettings().allow_manual_payment ? 'x' : 'check'" [size]="14"></app-icon>
+              <span>{{ dataService.paymentSettings().allow_manual_payment ? 'Disable Manual Payment Option' : 'Enable Manual Payment Option' }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- Main Category Tabs: SMS vs Website Monitoring vs Email Credits -->
       <div class="flex items-center gap-3 border-b border-slate-200 pb-2 overflow-x-auto">
         <button 
-          (click)="selectedCategory = 'SMS'"
+          (click)="setCategory('SMS')"
           [class]="selectedCategory === 'SMS' ? 'bg-indigo-600 text-white font-extrabold shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 font-semibold'"
           class="px-4 py-2 rounded-xl text-xs flex items-center gap-2 transition-all whitespace-nowrap">
           <app-icon name="credit-card" [size]="14"></app-icon>
@@ -41,7 +82,7 @@ import { IconComponent } from '../shared/icon.component';
         </button>
 
         <button 
-          (click)="selectedCategory = 'MONITORING'"
+          (click)="setCategory('MONITORING')"
           [class]="selectedCategory === 'MONITORING' ? 'bg-indigo-600 text-white font-extrabold shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 font-semibold'"
           class="px-4 py-2 rounded-xl text-xs flex items-center gap-2 transition-all whitespace-nowrap">
           <app-icon name="activity" [size]="14"></app-icon>
@@ -52,13 +93,24 @@ import { IconComponent } from '../shared/icon.component';
         </button>
 
         <button 
-          (click)="selectedCategory = 'EMAIL'"
+          (click)="setCategory('EMAIL')"
           [class]="selectedCategory === 'EMAIL' ? 'bg-indigo-600 text-white font-extrabold shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 font-semibold'"
           class="px-4 py-2 rounded-xl text-xs flex items-center gap-2 transition-all whitespace-nowrap">
           <app-icon name="mail" [size]="14"></app-icon>
           <span>Email Credits Purchases</span>
           <span *ngIf="pendingEmailCount() > 0" class="px-2 py-0.5 rounded-full bg-amber-400 text-slate-900 text-[10px] font-black animate-pulse">
             {{ pendingEmailCount() }} PENDING
+          </span>
+        </button>
+
+        <button 
+          (click)="setCategory('WHATSAPP')"
+          [class]="selectedCategory === 'WHATSAPP' ? 'bg-indigo-600 text-white font-extrabold shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 font-semibold'"
+          class="px-4 py-2 rounded-xl text-xs flex items-center gap-2 transition-all whitespace-nowrap">
+          <app-icon name="message-circle" [size]="14"></app-icon>
+          <span>WhatsApp Credit Purchases</span>
+          <span *ngIf="pendingWhatsappCount() > 0" class="px-2 py-0.5 rounded-full bg-amber-400 text-slate-900 text-[10px] font-black animate-pulse">
+            {{ pendingWhatsappCount() }} PENDING
           </span>
         </button>
       </div>
@@ -73,7 +125,7 @@ import { IconComponent } from '../shared/icon.component';
           <div>
             <p class="text-xs font-bold text-amber-700 uppercase tracking-wider">Pending Approvals</p>
             <h3 class="text-2xl font-black text-slate-900 font-mono">
-              {{ selectedCategory === 'SMS' ? pendingSmsCount() : (selectedCategory === 'MONITORING' ? pendingMonitoringCount() : pendingEmailCount()) }} Requests
+              {{ selectedCategory === 'SMS' ? pendingSmsCount() : (selectedCategory === 'MONITORING' ? pendingMonitoringCount() : (selectedCategory === 'EMAIL' ? pendingEmailCount() : pendingWhatsappCount())) }} Requests
             </h3>
           </div>
         </div>
@@ -86,7 +138,7 @@ import { IconComponent } from '../shared/icon.component';
           <div>
             <p class="text-xs font-bold text-emerald-700 uppercase tracking-wider">Approved & Credited</p>
             <h3 class="text-2xl font-black text-slate-900 font-mono">
-              {{ selectedCategory === 'SMS' ? approvedSmsCount() : (selectedCategory === 'MONITORING' ? approvedMonitoringCount() : approvedEmailCount()) }} Orders
+              {{ selectedCategory === 'SMS' ? approvedSmsCount() : (selectedCategory === 'MONITORING' ? approvedMonitoringCount() : (selectedCategory === 'EMAIL' ? approvedEmailCount() : approvedWhatsappCount())) }} Orders
             </h3>
           </div>
         </div>
@@ -99,7 +151,7 @@ import { IconComponent } from '../shared/icon.component';
           <div>
             <p class="text-xs font-bold text-indigo-700 uppercase tracking-wider">Total Bank Orders</p>
             <h3 class="text-2xl font-black text-slate-900 font-mono">
-              {{ selectedCategory === 'SMS' ? dataService.bankTransfers().length : (selectedCategory === 'MONITORING' ? dataService.monitoringBankTransfers().length : dataService.emailBankTransfers().length) }} Orders
+              {{ selectedCategory === 'SMS' ? dataService.bankTransfers().length : (selectedCategory === 'MONITORING' ? dataService.monitoringBankTransfers().length : (selectedCategory === 'EMAIL' ? dataService.emailBankTransfers().length : dataService.whatsappBankTransfers().length)) }} Orders
             </h3>
             <p class="text-xs font-bold text-indigo-600 font-mono mt-0.5">Direct UTR Verifications</p>
           </div>
@@ -369,6 +421,83 @@ import { IconComponent } from '../shared/icon.component';
             </tbody>
           </table>
         </div>
+
+        <!-- 4. WHATSAPP CREDITS TABLE -->
+        <div *ngIf="selectedCategory === 'WHATSAPP'" class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-slate-50/80 border-b border-slate-200/80 text-[10px] font-black text-slate-500 uppercase tracking-wider">
+                <th class="py-3 px-4">User Account</th>
+                <th class="py-3 px-4">WhatsApp Credits</th>
+                <th class="py-3 px-4">Rate & Pricing</th>
+                <th class="py-3 px-4">Total Amount</th>
+                <th class="py-3 px-4">UTR Number</th>
+                <th class="py-3 px-4">Payment Proof</th>
+                <th class="py-3 px-4">Admin Status</th>
+                <th class="py-3 px-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 text-xs font-medium text-slate-700">
+              <tr *ngFor="let ord of filteredWhatsappRequests()" class="hover:bg-slate-50/60 transition-all">
+                <td class="py-3.5 px-4">
+                  <div class="font-bold text-slate-900">{{ ord.userName }}</div>
+                  <div class="text-[11px] text-slate-400 font-mono">{{ ord.userEmail }}</div>
+                  <div class="text-[10px] text-slate-400 font-mono">Order: {{ ord.orderNumber }}</div>
+                </td>
+                <td class="py-3.5 px-4">
+                  <span class="font-black text-emerald-600 font-mono text-sm block">{{ ord.credits || ord.quantity | number }} Credits</span>
+                  <span class="text-[11px] text-slate-500 font-mono">&#64; ₹{{ ord.ratePerCredit | number:'1.2-4' }}/Msg</span>
+                </td>
+                <td class="py-3.5 px-4 font-mono text-[11px] space-y-0.5">
+                  <div class="text-slate-600">Base: ₹{{ ord.baseAmount | number:'1.2-2' }}</div>
+                  <div class="text-slate-400 text-[10px]">GST: ₹{{ ord.gstAmount | number:'1.2-2' }}</div>
+                </td>
+                <td class="py-3.5 px-4">
+                  <span class="font-extrabold text-slate-900 text-sm font-mono block">₹{{ ord.totalPayable | number:'1.2-2' }}</span>
+                  <span class="text-[10px] text-emerald-600 font-bold uppercase">{{ ord.paymentStatus }}</span>
+                </td>
+                <td class="py-3.5 px-4">
+                  <div class="inline-flex items-center gap-1 bg-slate-100 px-2 py-1 rounded border border-slate-200 text-slate-800 font-mono text-[11px] font-bold">
+                    <span>{{ ord.utrNumber }}</span>
+                  </div>
+                </td>
+                <td class="py-3.5 px-4">
+                  <button 
+                    *ngIf="ord.paymentProofUrl" 
+                    (click)="viewProof(ord.paymentProofUrl, ord.orderNumber)" 
+                    class="btn btn-outline btn-sm text-[11px] py-1 px-2 flex items-center gap-1 text-indigo-600 border-indigo-200 hover:bg-indigo-50">
+                    <app-icon name="file-text" [size]="12"></app-icon>
+                    <span>View Proof</span>
+                  </button>
+                  <span *ngIf="!ord.paymentProofUrl" class="text-slate-400 text-[11px] italic">No proof</span>
+                </td>
+                <td class="py-3.5 px-4">
+                  <span [class]="ord.adminStatus === 'APPROVED' ? 'badge badge-active text-[10px]' : (ord.adminStatus === 'PENDING' ? 'badge bg-amber-50 text-amber-700 border-amber-200 text-[10px]' : 'badge badge-suspended text-[10px]')">
+                    {{ ord.adminStatus }}
+                  </span>
+                </td>
+                <td class="py-3.5 px-4 text-right">
+                  <div *ngIf="ord.adminStatus === 'PENDING'" class="flex items-center justify-end gap-2">
+                    <button (click)="openApproveWhatsappModal(ord)" class="btn btn-primary btn-sm text-[11px] py-1 px-2.5 bg-emerald-600 hover:bg-emerald-700 border-emerald-600 shadow-xs">
+                      <app-icon name="check" [size]="12"></app-icon>
+                      <span>Approve</span>
+                    </button>
+                    <button (click)="openRejectWhatsappModal(ord)" class="btn btn-outline btn-sm text-[11px] py-1 px-2.5 text-rose-600 border-rose-200 hover:bg-rose-50">
+                      <app-icon name="x" [size]="12"></app-icon>
+                      <span>Reject</span>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+
+              <tr *ngIf="filteredWhatsappRequests().length === 0">
+                <td colspan="8" class="py-12 text-center text-slate-400">
+                  <p class="font-bold text-slate-600">No WhatsApp Credit Bank Transfers Found</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <!-- Modals -->
@@ -407,6 +536,19 @@ import { IconComponent } from '../shared/icon.component';
         </div>
       </div>
 
+      <div *ngIf="showApproveWhatsappModal && selectedWhatsappReq" class="modal-backdrop" (click)="showApproveWhatsappModal = false">
+        <div class="modal-card p-6 border border-slate-200 max-w-md bg-white rounded-2xl shadow-2xl" (click)="$event.stopPropagation()">
+          <h3 class="text-base font-extrabold text-slate-900 mb-2">Approve WhatsApp Credit Bank Transfer</h3>
+          <p class="text-xs text-slate-600 mb-4">
+            Credit <strong>{{ (selectedWhatsappReq.credits || selectedWhatsappReq.quantity) | number }} WhatsApp Credits</strong> to {{ selectedWhatsappReq.userName }} (Order: {{ selectedWhatsappReq.orderNumber }})
+          </p>
+          <div class="pt-4 border-t border-slate-100 flex justify-end gap-3">
+            <button (click)="showApproveWhatsappModal = false" class="btn btn-outline btn-sm">Cancel</button>
+            <button (click)="confirmApproveWhatsapp()" [disabled]="isSubmitting" class="btn btn-primary btn-sm bg-emerald-600">Credit WhatsApp</button>
+          </div>
+        </div>
+      </div>
+
       <div *ngIf="showRejectModal" class="modal-backdrop" (click)="showRejectModal = false">
         <div class="modal-card p-6 border border-slate-200 max-w-md bg-white rounded-2xl shadow-2xl" (click)="$event.stopPropagation()">
           <h3 class="text-base font-extrabold text-slate-900 mb-2">Reject Bank Transfer</h3>
@@ -437,24 +579,27 @@ export class BankTransfersComponent implements OnInit, OnDestroy {
   authService = inject(AuthService);
   private http = inject(HttpClient);
 
-  selectedCategory: 'SMS' | 'MONITORING' | 'EMAIL' = 'SMS';
+  selectedCategory: 'SMS' | 'MONITORING' | 'EMAIL' | 'WHATSAPP' = 'SMS';
   activeFilter: 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED' = 'ALL';
   searchQuery = '';
 
   showApproveSmsModal = false;
   showApproveMonitoringModal = false;
   showApproveEmailModal = false;
+  showApproveWhatsappModal = false;
   showRejectModal = false;
   showProofModal = false;
 
   selectedSmsReq: BankTransferRequest | null = null;
   selectedMonitoringReq: any | null = null;
   selectedEmailReq: any | null = null;
+  selectedWhatsappReq: any | null = null;
   activeProofOrderId = '';
 
   rejectionRemarks = '';
   rejectError = '';
   isSubmitting = false;
+  isTogglingManualPayment = false;
   
   currentProofSrc = '';
   imageLoaded = false;
@@ -463,7 +608,16 @@ export class BankTransfersComponent implements OnInit, OnDestroy {
   private currentObjectUrl: string | null = null;
 
   ngOnInit() {
+    const saved = localStorage.getItem('alert21_admin_bank_transfer_category');
+    if (saved && ['SMS', 'MONITORING', 'EMAIL', 'WHATSAPP'].includes(saved)) {
+      this.selectedCategory = saved as any;
+    }
     this.refreshAll();
+  }
+
+  setCategory(cat: 'SMS' | 'MONITORING' | 'EMAIL' | 'WHATSAPP') {
+    this.selectedCategory = cat;
+    localStorage.setItem('alert21_admin_bank_transfer_category', cat);
   }
 
   ngOnDestroy() {
@@ -473,9 +627,24 @@ export class BankTransfersComponent implements OnInit, OnDestroy {
   }
 
   refreshAll() {
+    this.dataService.fetchPaymentSettings();
     this.dataService.fetchLiveBankTransfers();
     this.dataService.fetchMonitoringBankTransfers();
     this.dataService.fetchEmailBankTransfers();
+    this.dataService.fetchWhatsappBankTransfers();
+  }
+
+  async toggleManualPaymentSetting(field: 'allow_manual_payment' | 'allow_whatsapp_manual_payment' | 'allow_sms_manual_payment' | 'allow_email_manual_payment' | 'allow_monitoring_manual_payment') {
+    const current = this.dataService.paymentSettings();
+    const newVal = !current[field];
+    this.isTogglingManualPayment = true;
+    try {
+      await this.dataService.updatePaymentSettings({
+        [field]: newVal
+      });
+    } finally {
+      this.isTogglingManualPayment = false;
+    }
   }
 
   getProofUrl(proof?: string): string {
@@ -538,6 +707,8 @@ export class BankTransfersComponent implements OnInit, OnDestroy {
   approvedMonitoringCount() { return this.dataService.monitoringBankTransfers().filter(t => t.adminStatus === 'APPROVED').length; }
   pendingEmailCount() { return this.dataService.emailBankTransfers().filter(t => t.adminStatus === 'PENDING').length; }
   approvedEmailCount() { return this.dataService.emailBankTransfers().filter(t => t.adminStatus === 'APPROVED').length; }
+  pendingWhatsappCount() { return this.dataService.whatsappBankTransfers().filter(t => t.adminStatus === 'PENDING').length; }
+  approvedWhatsappCount() { return this.dataService.whatsappBankTransfers().filter(t => t.adminStatus === 'APPROVED').length; }
 
   filteredSmsRequests() {
     return this.dataService.bankTransfers().filter(req => {
@@ -563,6 +734,17 @@ export class BankTransfersComponent implements OnInit, OnDestroy {
 
   filteredEmailRequests() {
     return this.dataService.emailBankTransfers().filter(req => {
+      if (this.activeFilter !== 'ALL' && req.adminStatus !== this.activeFilter) return false;
+      if (this.searchQuery) {
+        const q = this.searchQuery.toLowerCase();
+        return (req.orderNumber || '').toLowerCase().includes(q) || (req.utrNumber || '').toLowerCase().includes(q) || (req.userName || '').toLowerCase().includes(q) || (req.userEmail || '').toLowerCase().includes(q);
+      }
+      return true;
+    });
+  }
+
+  filteredWhatsappRequests() {
+    return this.dataService.whatsappBankTransfers().filter(req => {
       if (this.activeFilter !== 'ALL' && req.adminStatus !== this.activeFilter) return false;
       if (this.searchQuery) {
         const q = this.searchQuery.toLowerCase();
@@ -600,9 +782,19 @@ export class BankTransfersComponent implements OnInit, OnDestroy {
     if (success) { this.showApproveEmailModal = false; this.selectedEmailReq = null; }
   }
 
-  openRejectSmsModal(req: BankTransferRequest) { this.selectedSmsReq = req; this.selectedMonitoringReq = null; this.selectedEmailReq = null; this.rejectionRemarks = ''; this.rejectError = ''; this.showRejectModal = true; }
-  openRejectMonitoringModal(ord: any) { this.selectedMonitoringReq = ord; this.selectedSmsReq = null; this.selectedEmailReq = null; this.rejectionRemarks = ''; this.rejectError = ''; this.showRejectModal = true; }
-  openRejectEmailModal(ord: any) { this.selectedEmailReq = ord; this.selectedSmsReq = null; this.selectedMonitoringReq = null; this.rejectionRemarks = ''; this.rejectError = ''; this.showRejectModal = true; }
+  openApproveWhatsappModal(ord: any) { this.selectedWhatsappReq = ord; this.showApproveWhatsappModal = true; }
+  async confirmApproveWhatsapp() {
+    if (!this.selectedWhatsappReq) return;
+    this.isSubmitting = true;
+    const success = await this.dataService.approveWhatsappBankTransfer(this.selectedWhatsappReq.id);
+    this.isSubmitting = false;
+    if (success) { this.showApproveWhatsappModal = false; this.selectedWhatsappReq = null; }
+  }
+
+  openRejectSmsModal(req: BankTransferRequest) { this.selectedSmsReq = req; this.selectedMonitoringReq = null; this.selectedEmailReq = null; this.selectedWhatsappReq = null; this.rejectionRemarks = ''; this.rejectError = ''; this.showRejectModal = true; }
+  openRejectMonitoringModal(ord: any) { this.selectedMonitoringReq = ord; this.selectedSmsReq = null; this.selectedEmailReq = null; this.selectedWhatsappReq = null; this.rejectionRemarks = ''; this.rejectError = ''; this.showRejectModal = true; }
+  openRejectEmailModal(ord: any) { this.selectedEmailReq = ord; this.selectedSmsReq = null; this.selectedMonitoringReq = null; this.selectedWhatsappReq = null; this.rejectionRemarks = ''; this.rejectError = ''; this.showRejectModal = true; }
+  openRejectWhatsappModal(ord: any) { this.selectedWhatsappReq = ord; this.selectedSmsReq = null; this.selectedMonitoringReq = null; this.selectedEmailReq = null; this.rejectionRemarks = ''; this.rejectError = ''; this.showRejectModal = true; }
 
   async confirmReject() {
     if (!this.rejectionRemarks.trim()) { this.rejectError = 'Rejection reason is mandatory.'; return; }
@@ -619,6 +811,9 @@ export class BankTransfersComponent implements OnInit, OnDestroy {
     } else if (this.selectedEmailReq) {
       success = await this.dataService.rejectEmailBankTransfer(this.selectedEmailReq.id, this.rejectionRemarks);
       if (success) this.selectedEmailReq = null;
+    } else if (this.selectedWhatsappReq) {
+      success = await this.dataService.rejectWhatsappBankTransfer(this.selectedWhatsappReq.id, this.rejectionRemarks);
+      if (success) this.selectedWhatsappReq = null;
     }
     this.isSubmitting = false;
     if (success) this.showRejectModal = false;

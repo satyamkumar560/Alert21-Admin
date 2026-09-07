@@ -31,7 +31,17 @@ import {
   EmailTemplate,
   EmailTransaction,
   EmailPricingSlab,
-  EmailDashboardStats
+  EmailDashboardStats,
+  WhatsappProviderConfig,
+  WhatsappAccount,
+  WhatsappPhoneNumber,
+  WhatsappTemplate,
+  WhatsappCampaign,
+  WhatsappTransaction,
+  WhatsappWebhookLog,
+  WhatsappPricingSlab,
+  WhatsappOrder,
+  WhatsappDashboardStats
 } from '../models/alert21.models';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
@@ -75,6 +85,34 @@ export class DataService {
   emailDashboardStats = signal<EmailDashboardStats | null>(null);
   emailBankTransfers = signal<any[]>([]);
 
+  // Task #07 Meta WhatsApp Business Platform Signals
+  whatsappStats = signal<WhatsappDashboardStats | null>(null);
+  whatsappConfig = signal<WhatsappProviderConfig | null>(null);
+  whatsappAccounts = signal<WhatsappAccount[]>([]);
+  whatsappPhoneNumbers = signal<WhatsappPhoneNumber[]>([]);
+  whatsappTemplates = signal<WhatsappTemplate[]>([]);
+  whatsappCampaigns = signal<WhatsappCampaign[]>([]);
+  whatsappTransactions = signal<WhatsappTransaction[]>([]);
+  whatsappWebhookLogs = signal<WhatsappWebhookLog[]>([]);
+  whatsappInboundLogs = signal<WhatsappTransaction[]>([]);
+  whatsappPricingSlabs = signal<WhatsappPricingSlab[]>([]);
+  whatsappBankTransfers = signal<WhatsappOrder[]>([]);
+
+  // Payment Settings (Manual Bank Transfer controls)
+  paymentSettings = signal<{
+    allow_manual_payment: boolean;
+    allow_whatsapp_manual_payment: boolean;
+    allow_sms_manual_payment: boolean;
+    allow_email_manual_payment: boolean;
+    allow_monitoring_manual_payment: boolean;
+  }>({
+    allow_manual_payment: true,
+    allow_whatsapp_manual_payment: true,
+    allow_sms_manual_payment: true,
+    allow_email_manual_payment: true,
+    allow_monitoring_manual_payment: true
+  });
+
   constructor() {
     this.fetchLiveDashboardStats();
     this.fetchLiveUsers();
@@ -87,6 +125,7 @@ export class DataService {
     this.fetchMonitoringBankTransfers();
     this.fetchEmailBankTransfers();
     this.fetchBillingDashboardStats();
+    this.fetchPaymentSettings();
   }
 
   /**
@@ -1033,6 +1072,71 @@ export class DataService {
     } catch (e: any) {
       console.error('Reject bank transfer error', e);
       this.toastService.showError('Rejection Failed', e?.error?.message || 'Failed to reject bank transfer.');
+    }
+    return false;
+  }
+
+  /**
+   * GET Payment Settings: https://app.alert21.in/back/api/admin/billing/payment-settings
+   */
+  async fetchPaymentSettings(): Promise<any> {
+    try {
+      const token = this.authService.authToken();
+      const headers = new HttpHeaders({
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      });
+      const response = await firstValueFrom(
+        this.http.get<any>(`https://app.alert21.in/back/api/admin/billing/payment-settings`, { headers })
+      );
+      if (response && (response.success || response.data)) {
+        const data = response.data || response;
+        this.paymentSettings.set({
+          allow_manual_payment: data.allow_manual_payment !== false,
+          allow_whatsapp_manual_payment: data.allow_whatsapp_manual_payment !== false,
+          allow_sms_manual_payment: data.allow_sms_manual_payment !== false,
+          allow_email_manual_payment: data.allow_email_manual_payment !== false,
+          allow_monitoring_manual_payment: data.allow_monitoring_manual_payment !== false
+        });
+        return data;
+      }
+    } catch (e) {
+      console.warn('Bank payment settings API fallback.', e);
+    }
+    return null;
+  }
+
+  /**
+   * POST Update Payment Settings: https://app.alert21.in/back/api/admin/billing/payment-settings
+   */
+  async updatePaymentSettings(settings: Partial<{
+    allow_manual_payment: boolean;
+    allow_whatsapp_manual_payment: boolean;
+    allow_sms_manual_payment: boolean;
+    allow_email_manual_payment: boolean;
+    allow_monitoring_manual_payment: boolean;
+  }>): Promise<boolean> {
+    try {
+      const token = this.authService.authToken();
+      const headers = new HttpHeaders({
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      });
+      const response = await firstValueFrom(
+        this.http.post<any>(`https://app.alert21.in/back/api/admin/billing/payment-settings`, settings, { headers })
+      );
+      if (response && (response.success || response.data)) {
+        const data = response.data || settings;
+        this.paymentSettings.update(curr => ({
+          ...curr,
+          ...data
+        }));
+        this.toastService.showSuccess('Settings Updated', 'Manual payment permissions updated successfully.');
+        return true;
+      }
+    } catch (e: any) {
+      console.error('Update payment settings error', e);
+      this.toastService.showError('Update Failed', e?.error?.message || 'Failed to update payment settings.');
     }
     return false;
   }
@@ -2967,6 +3071,946 @@ export class DataService {
         const msg = e?.error?.message || e?.message || 'Rejection failed';
         this.toastService.showError('Rejection Error', msg);
         return false;
+      }
+    }
+    return false;
+  }
+
+  // ========================================================
+  // TASK #07: META WHATSAPP BUSINESS PLATFORM API METHODS
+  // ========================================================
+
+  /**
+   * GET /api/admin/whatsapp/dashboard
+   */
+  async fetchWhatsappStats(): Promise<void> {
+    const headers = this.getAuthHeaders();
+    const urls = [
+      'https://app.alert21.in/back/api/admin/whatsapp/dashboard',
+      'https://app.alert21.in/back/api/v1/admin/whatsapp/dashboard'
+    ];
+
+    for (const url of urls) {
+      try {
+        const res = await firstValueFrom(this.http.get<any>(url, { headers }));
+        if (res && res.success && res.data) {
+          this.whatsappStats.set(res.data);
+          break;
+        }
+      } catch (e) {}
+    }
+  }
+
+  /**
+   * GET /api/admin/whatsapp/meta-config
+   */
+  async fetchWhatsappConfig(): Promise<void> {
+    const headers = this.getAuthHeaders();
+    const urls = [
+      'https://app.alert21.in/back/api/admin/whatsapp/meta-config',
+      'https://app.alert21.in/back/api/v1/admin/whatsapp/meta-config'
+    ];
+
+    for (const url of urls) {
+      try {
+        const res = await firstValueFrom(this.http.get<any>(url, { headers }));
+        if (res && res.success && res.data) {
+          const cfg = res.data;
+          this.whatsappConfig.set({
+            id: cfg._id || cfg.id,
+            providerName: cfg.provider_name || 'Meta WhatsApp Cloud API',
+            metaAppId: cfg.meta_app_id || '',
+            metaAppSecret: cfg.meta_app_secret,
+            metaAppSecretMasked: cfg.meta_app_secret_masked || '••••••••••••••••',
+            embeddedSignupConfigId: cfg.embedded_signup_config_id || '',
+            graphApiVersion: cfg.graph_api_version || 'v20.0',
+            systemUserAccessToken: cfg.system_user_access_token,
+            systemUserAccessTokenMasked: cfg.system_user_access_token_masked,
+            webhookVerifyToken: cfg.webhook_verify_token || 'alert21_meta_webhook_secret_token',
+            webhookCallbackUrl: cfg.webhook_callback_url || 'https://app.alert21.in/back/api/v1/whatsapp/meta/webhook',
+            dataDeletionCallbackUrl: cfg.data_deletion_callback_url,
+            privacyPolicyUrl: cfg.privacy_policy_url || 'https://alert21.in/privacy-policy',
+            termsUrl: cfg.terms_url || 'https://alert21.in/terms',
+            status: cfg.status || 'ACTIVE',
+            environment: cfg.environment || 'PRODUCTION',
+            createdAt: cfg.createdAt || cfg.created_at,
+            updatedAt: cfg.updatedAt || cfg.updated_at
+          });
+          break;
+        }
+      } catch (e) {}
+    }
+  }
+
+  /**
+   * POST/PUT /api/admin/whatsapp/meta-config
+   */
+  async saveWhatsappConfig(payload: any): Promise<boolean> {
+    const headers = this.getAuthHeaders();
+    const urls = [
+      'https://app.alert21.in/back/api/admin/whatsapp/meta-config',
+      'https://app.alert21.in/back/api/v1/admin/whatsapp/meta-config'
+    ];
+
+    const body = {
+      provider_name: payload.providerName,
+      meta_app_id: payload.metaAppId,
+      meta_app_secret: payload.metaAppSecret,
+      embedded_signup_config_id: payload.embeddedSignupConfigId,
+      graph_api_version: payload.graphApiVersion,
+      system_user_access_token: payload.systemUserAccessToken,
+      webhook_verify_token: payload.webhookVerifyToken,
+      webhook_callback_url: payload.webhookCallbackUrl,
+      data_deletion_callback_url: payload.dataDeletionCallbackUrl,
+      privacy_policy_url: payload.privacyPolicyUrl,
+      terms_url: payload.termsUrl,
+      status: payload.status,
+      environment: payload.environment
+    };
+
+    for (const url of urls) {
+      try {
+        const res = await firstValueFrom(this.http.post<any>(url, body, { headers }));
+        if (res && (res.success || res.data)) {
+          await this.fetchWhatsappConfig();
+          this.toastService.showSuccess('Config Saved', 'Meta App & Embedded Signup settings saved.');
+          return true;
+        }
+      } catch (e: any) {
+        const msg = e?.error?.message || e?.message || 'Failed to save Meta config';
+        this.toastService.showError('Save Error', msg);
+        return false;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * POST /api/admin/whatsapp/meta-config/test
+   */
+  async testWhatsappMetaConnection(): Promise<{ success: boolean; message: string }> {
+    const headers = this.getAuthHeaders();
+    const urls = [
+      'https://app.alert21.in/back/api/admin/whatsapp/meta-config/test',
+      'https://app.alert21.in/back/api/v1/admin/whatsapp/meta-config/test'
+    ];
+
+    for (const url of urls) {
+      try {
+        const res = await firstValueFrom(this.http.post<any>(url, {}, { headers }));
+        if (res && res.success) {
+          this.toastService.showSuccess('Connection Verified', res.message || 'Meta Graph API connected successfully.');
+          return { success: true, message: res.message };
+        }
+      } catch (e: any) {
+        const msg = e?.error?.message || e?.message || 'Meta connection test failed.';
+        this.toastService.showError('Test Failed', msg);
+        return { success: false, message: msg };
+      }
+    }
+    return { success: false, message: 'Server not reachable' };
+  }
+
+  /**
+   * GET /api/admin/whatsapp/accounts
+   */
+  async fetchWhatsappAccounts(status: string = 'ALL', search: string = ''): Promise<void> {
+    const headers = this.getAuthHeaders();
+    const params: any = {};
+    if (status && status !== 'ALL') params.status = status;
+    if (search) params.search = search;
+
+    const urls = [
+      'https://app.alert21.in/back/api/admin/whatsapp/accounts',
+      'https://app.alert21.in/back/api/v1/admin/whatsapp/accounts'
+    ];
+
+    for (const url of urls) {
+      try {
+        const res = await firstValueFrom(this.http.get<any>(url, { headers, params }));
+        const list = res?.data?.accounts || res?.data || res?.accounts;
+        if (list && Array.isArray(list)) {
+          const mapped: WhatsappAccount[] = list.map((a: any) => ({
+            id: a._id || a.id,
+            userId: a.user_id?._id || a.user_id?.id || a.user_id,
+            userName: a.user_id?.fullName || a.userName || 'Customer User',
+            userEmail: a.user_id?.email || a.userEmail || 'user@example.com',
+            userMobile: a.user_id?.mobileNumber || a.userMobile,
+            metaBusinessId: a.meta_business_id,
+            wabaId: a.waba_id,
+            wabaName: a.waba_name,
+            currency: a.currency || 'INR',
+            timezoneId: a.timezone_id || 'Asia/Kolkata',
+            connectionStatus: a.connection_status || 'CONNECTED',
+            phoneNumbersCount: a.phone_numbers_count ?? a.phone_numbers?.length ?? 0,
+            templatesCount: a.templates_count ?? 0,
+            phoneNumbers: a.phone_numbers,
+            connectedAt: a.connected_at || a.createdAt,
+            disconnectedAt: a.disconnected_at,
+            lastSyncedAt: a.last_synced_at,
+            createdAt: a.createdAt || a.created_at,
+            updatedAt: a.updatedAt || a.updated_at
+          }));
+          this.whatsappAccounts.set(mapped);
+          break;
+        }
+      } catch (e) {}
+    }
+  }
+
+  /**
+   * POST /api/admin/whatsapp/accounts/:id/sync
+   */
+  async syncWhatsappAccount(id: string): Promise<boolean> {
+    const headers = this.getAuthHeaders();
+    const urls = [
+      `https://app.alert21.in/back/api/admin/whatsapp/accounts/${id}/sync`,
+      `https://app.alert21.in/back/api/v1/admin/whatsapp/accounts/${id}/sync`
+    ];
+
+    for (const url of urls) {
+      try {
+        const res = await firstValueFrom(this.http.post<any>(url, {}, { headers }));
+        if (res && res.success) {
+          await this.fetchWhatsappAccounts();
+          this.toastService.showSuccess('Synced', res.message || 'WABA account synced with Meta.');
+          return true;
+        }
+      } catch (e: any) {
+        this.toastService.showError('Sync Error', e?.error?.message || 'Sync failed');
+      }
+    }
+    return false;
+  }
+
+  /**
+   * POST /api/admin/whatsapp/accounts/:id/status
+   */
+  async updateWhatsappAccountStatus(id: string, connection_status: string): Promise<boolean> {
+    const headers = this.getAuthHeaders();
+    const urls = [
+      `https://app.alert21.in/back/api/admin/whatsapp/accounts/${id}/status`,
+      `https://app.alert21.in/back/api/v1/admin/whatsapp/accounts/${id}/status`
+    ];
+
+    for (const url of urls) {
+      try {
+        const res = await firstValueFrom(this.http.post<any>(url, { connection_status }, { headers }));
+        if (res && res.success) {
+          await this.fetchWhatsappAccounts();
+          this.toastService.showSuccess('Status Updated', 'Account status modified.');
+          return true;
+        }
+      } catch (e: any) {
+        this.toastService.showError('Update Failed', e?.error?.message || 'Update failed');
+      }
+    }
+    return false;
+  }
+
+  /**
+   * GET /api/admin/whatsapp/numbers
+   */
+  async fetchWhatsappNumbers(status: string = 'ALL'): Promise<void> {
+    const headers = this.getAuthHeaders();
+    const params: any = {};
+    if (status && status !== 'ALL') params.status = status;
+
+    const urls = [
+      'https://app.alert21.in/back/api/admin/whatsapp/numbers',
+      'https://app.alert21.in/back/api/v1/admin/whatsapp/numbers'
+    ];
+
+    for (const url of urls) {
+      try {
+        const res = await firstValueFrom(this.http.get<any>(url, { headers, params }));
+        const list = res?.data || res?.numbers;
+        if (list && Array.isArray(list)) {
+          const mapped: WhatsappPhoneNumber[] = list.map((n: any) => ({
+            id: n._id || n.id,
+            userId: n.user_id?._id || n.user_id?.id || n.user_id,
+            userName: n.user_id?.fullName || n.userName || 'User',
+            userEmail: n.user_id?.email || n.userEmail,
+            wabaId: n.waba_id,
+            wabaName: n.account_id?.waba_name,
+            accountId: n.account_id?._id || n.account_id?.id || n.account_id,
+            phoneNumberId: n.phone_number_id,
+            displayPhoneNumber: n.display_phone_number,
+            verifiedName: n.verified_name,
+            qualityRating: n.quality_rating || 'GREEN',
+            codeVerificationStatus: n.code_verification_status || 'VERIFIED',
+            messagingLimitTier: n.messaging_limit_tier || 'TIER_1K',
+            isDefault: n.is_default ?? false,
+            status: n.status || 'ACTIVE',
+            createdAt: n.createdAt || n.created_at,
+            updatedAt: n.updatedAt || n.updated_at
+          }));
+          this.whatsappPhoneNumbers.set(mapped);
+          break;
+        }
+      } catch (e) {}
+    }
+  }
+
+  /**
+   * POST /api/admin/whatsapp/numbers/:id/status
+   */
+  async updateWhatsappPhoneNumber(id: string, payload: any): Promise<boolean> {
+    const headers = this.getAuthHeaders();
+    const urls = [
+      `https://app.alert21.in/back/api/admin/whatsapp/numbers/${id}/status`,
+      `https://app.alert21.in/back/api/v1/admin/whatsapp/numbers/${id}/status`
+    ];
+
+    for (const url of urls) {
+      try {
+        const res = await firstValueFrom(this.http.post<any>(url, payload, { headers }));
+        if (res && res.success) {
+          await this.fetchWhatsappNumbers();
+          this.toastService.showSuccess('Updated', 'Phone number properties updated.');
+          return true;
+        }
+      } catch (e: any) {
+        this.toastService.showError('Update Error', e?.error?.message || 'Update failed');
+      }
+    }
+    return false;
+  }
+
+  /**
+   * GET /api/admin/whatsapp/templates
+   */
+  async fetchWhatsappTemplates(status: string = 'ALL', category: string = 'ALL'): Promise<void> {
+    const headers = this.getAuthHeaders();
+    const params: any = {};
+    if (status && status !== 'ALL') params.status = status;
+    if (category && category !== 'ALL') params.category = category;
+
+    const urls = [
+      'https://app.alert21.in/back/api/admin/whatsapp/templates',
+      'https://app.alert21.in/back/api/v1/admin/whatsapp/templates'
+    ];
+
+    for (const url of urls) {
+      try {
+        const res = await firstValueFrom(this.http.get<any>(url, { headers, params }));
+        const list = res?.data || res?.templates;
+        if (list && Array.isArray(list)) {
+          const mapped: WhatsappTemplate[] = list.map((t: any) => ({
+            id: t._id || t.id,
+            userId: t.user_id?._id || t.user_id?.id || t.user_id,
+            userName: t.user_id?.fullName || t.userName || 'User',
+            userEmail: t.user_id?.email || t.userEmail,
+            wabaId: t.waba_id,
+            metaTemplateId: t.meta_template_id,
+            name: t.name,
+            category: t.category || 'UTILITY',
+            language: t.language || 'en',
+            headerType: t.header_type || 'NONE',
+            headerContent: t.header_content,
+            body: t.body,
+            variables: t.variables || [],
+            footer: t.footer,
+            buttons: t.buttons || [],
+            status: t.status || 'APPROVED',
+            rejectionReason: t.rejection_reason,
+            lastSyncedAt: t.last_synced_at,
+            createdAt: t.createdAt || t.created_at,
+            updatedAt: t.updatedAt || t.updated_at
+          }));
+          this.whatsappTemplates.set(mapped);
+          break;
+        }
+      } catch (e) {}
+    }
+  }
+
+  /**
+   * POST /api/admin/whatsapp/templates/:id/sync
+   */
+  async syncWhatsappTemplate(id: string): Promise<boolean> {
+    const headers = this.getAuthHeaders();
+    const urls = [
+      `https://app.alert21.in/back/api/admin/whatsapp/templates/${id}/sync`,
+      `https://app.alert21.in/back/api/v1/admin/whatsapp/templates/${id}/sync`
+    ];
+
+    for (const url of urls) {
+      try {
+        const res = await firstValueFrom(this.http.post<any>(url, {}, { headers }));
+        if (res && res.success) {
+          await this.fetchWhatsappTemplates();
+          this.toastService.showSuccess('Template Synced', res.message || 'Template status refreshed from Meta.');
+          return true;
+        }
+      } catch (e: any) {
+        this.toastService.showError('Sync Failed', e?.error?.message || 'Sync failed');
+      }
+    }
+    return false;
+  }
+
+  /**
+   * POST /api/admin/whatsapp/templates/:id/status
+   */
+  async updateWhatsappTemplateStatus(id: string, payload: { status: string; rejection_reason?: string }): Promise<boolean> {
+    const headers = this.getAuthHeaders();
+    const urls = [
+      `https://app.alert21.in/back/api/admin/whatsapp/templates/${id}/status`,
+      `https://app.alert21.in/back/api/v1/admin/whatsapp/templates/${id}/status`
+    ];
+
+    for (const url of urls) {
+      try {
+        const res = await firstValueFrom(this.http.post<any>(url, payload, { headers }));
+        if (res && res.success) {
+          await this.fetchWhatsappTemplates();
+          this.toastService.showSuccess('Template Updated', 'Template status updated.');
+          return true;
+        }
+      } catch (e: any) {
+        this.toastService.showError('Update Failed', e?.error?.message || 'Update failed');
+      }
+    }
+    return false;
+  }
+
+  /**
+   * GET /api/admin/whatsapp/campaigns
+   */
+  async fetchWhatsappCampaigns(status: string = 'ALL'): Promise<void> {
+    const headers = this.getAuthHeaders();
+    const params: any = {};
+    if (status && status !== 'ALL') params.status = status;
+
+    const urls = [
+      'https://app.alert21.in/back/api/admin/whatsapp/campaigns',
+      'https://app.alert21.in/back/api/v1/admin/whatsapp/campaigns'
+    ];
+
+    for (const url of urls) {
+      try {
+        const res = await firstValueFrom(this.http.get<any>(url, { headers, params }));
+        const list = res?.data || res?.campaigns;
+        if (list && Array.isArray(list)) {
+          const mapped: WhatsappCampaign[] = list.map((c: any) => ({
+            id: c._id || c.id,
+            userId: c.user_id?._id || c.user_id?.id || c.user_id,
+            userName: c.user_id?.fullName || c.userName || 'User',
+            userEmail: c.user_id?.email || c.userEmail,
+            name: c.name,
+            wabaId: c.waba_id,
+            phoneNumberId: c.phone_number_id?._id || c.phone_number_id || '',
+            displayPhoneNumber: c.phone_number_id?.display_phone_number || c.displayPhoneNumber,
+            templateId: c.template_id?._id || c.template_id || '',
+            templateName: c.template_id?.name || c.templateName,
+            templateCategory: c.template_id?.category || 'MARKETING',
+            totalAudience: c.total_audience || c.audience_count || 0,
+            queuedCount: c.queued_count || 0,
+            submittedCount: c.submitted_count || 0,
+            deliveredCount: c.delivered_count || 0,
+            readCount: c.read_count || 0,
+            failedCount: c.failed_count || 0,
+            optoutCount: c.optout_count || 0,
+            status: c.status || 'RUNNING',
+            scheduledAt: c.scheduled_at,
+            startedAt: c.started_at,
+            completedAt: c.completed_at,
+            createdAt: c.createdAt || c.created_at,
+            updatedAt: c.updatedAt || c.updated_at
+          }));
+          this.whatsappCampaigns.set(mapped);
+          break;
+        }
+      } catch (e) {}
+    }
+  }
+
+  /**
+   * POST /api/admin/whatsapp/campaigns/:id/status
+   */
+  async updateWhatsappCampaignStatus(id: string, status: string): Promise<boolean> {
+    const headers = this.getAuthHeaders();
+    const urls = [
+      `https://app.alert21.in/back/api/admin/whatsapp/campaigns/${id}/status`,
+      `https://app.alert21.in/back/api/v1/admin/whatsapp/campaigns/${id}/status`
+    ];
+
+    for (const url of urls) {
+      try {
+        const res = await firstValueFrom(this.http.post<any>(url, { status }, { headers }));
+        if (res && res.success) {
+          await this.fetchWhatsappCampaigns();
+          this.toastService.showSuccess('Campaign Updated', `Campaign status changed to ${status}.`);
+          return true;
+        }
+      } catch (e: any) {
+        this.toastService.showError('Update Failed', e?.error?.message || 'Update failed');
+      }
+    }
+    return false;
+  }
+
+  /**
+   * GET /api/admin/whatsapp/logs
+   */
+  async fetchWhatsappTransactions(status: string = 'ALL', direction: string = 'ALL', search: string = ''): Promise<void> {
+    const headers = this.getAuthHeaders();
+    const params: any = {};
+    if (status && status !== 'ALL') params.status = status;
+    if (direction && direction !== 'ALL') params.direction = direction;
+    if (search) params.search = search;
+
+    const urls = [
+      'https://app.alert21.in/back/api/admin/whatsapp/logs',
+      'https://app.alert21.in/back/api/v1/admin/whatsapp/logs'
+    ];
+
+    for (const url of urls) {
+      try {
+        const res = await firstValueFrom(this.http.get<any>(url, { headers, params }));
+        const list = res?.data?.transactions || res?.data || res?.logs;
+        if (list && Array.isArray(list)) {
+          const mapped: WhatsappTransaction[] = list.map((tx: any) => ({
+            id: tx._id || tx.id,
+            transactionId: tx.transaction_id,
+            userId: tx.user_id?._id || tx.user_id?.id || tx.user_id,
+            userName: tx.user_id?.fullName || tx.userName || 'User',
+            userEmail: tx.user_id?.email || tx.userEmail,
+            wabaId: tx.waba_id,
+            phoneNumberId: tx.phone_number_id,
+            templateId: tx.template_id,
+            templateName: tx.template_name,
+            templateCategory: tx.template_category || 'UTILITY',
+            language: tx.language || 'en',
+            recipient: tx.recipient,
+            metaMessageId: tx.meta_message_id,
+            direction: tx.direction || 'OUTBOUND',
+            source: tx.source || 'PANEL',
+            campaignId: tx.campaign_id,
+            status: tx.status || 'SENT',
+            providerStatus: tx.provider_status,
+            errorCode: tx.error_code,
+            errorMessage: tx.error_message,
+            creditDebit: tx.credit_debit ?? 1,
+            ratePerMessage: tx.rate_per_message,
+            createdAt: tx.created_at || tx.createdAt,
+            sentAt: tx.sent_at,
+            deliveredAt: tx.delivered_at,
+            readAt: tx.read_at,
+            failedAt: tx.failed_at
+          }));
+          this.whatsappTransactions.set(mapped);
+          break;
+        }
+      } catch (e) {}
+    }
+  }
+
+  /**
+   * GET /api/admin/whatsapp/webhook-logs
+   */
+  async fetchWhatsappWebhookLogs(): Promise<void> {
+    const headers = this.getAuthHeaders();
+    const urls = [
+      'https://app.alert21.in/back/api/admin/whatsapp/webhook-logs',
+      'https://app.alert21.in/back/api/v1/admin/whatsapp/webhook-logs'
+    ];
+
+    for (const url of urls) {
+      try {
+        const res = await firstValueFrom(this.http.get<any>(url, { headers }));
+        const list = res?.data?.logs || res?.data;
+        if (list && Array.isArray(list)) {
+          const mapped: WhatsappWebhookLog[] = list.map((l: any) => ({
+            id: l._id || l.id,
+            providerId: l.provider_id || 'META_WHATSAPP',
+            metaMessageId: l.meta_message_id,
+            eventType: l.event_type || 'STATUS_UPDATE',
+            recipientId: l.recipient_id,
+            status: l.status,
+            payload: l.payload,
+            receivedAt: l.received_at || l.createdAt
+          }));
+          this.whatsappWebhookLogs.set(mapped);
+          break;
+        }
+      } catch (e) {}
+    }
+  }
+
+  /**
+   * GET /api/admin/whatsapp/inbound-logs
+   */
+  async fetchWhatsappInboundLogs(): Promise<void> {
+    const headers = this.getAuthHeaders();
+    const urls = [
+      'https://app.alert21.in/back/api/admin/whatsapp/inbound-logs',
+      'https://app.alert21.in/back/api/v1/admin/whatsapp/inbound-logs'
+    ];
+
+    for (const url of urls) {
+      try {
+        const res = await firstValueFrom(this.http.get<any>(url, { headers }));
+        const list = res?.data;
+        if (list && Array.isArray(list)) {
+          const mapped: WhatsappTransaction[] = list.map((tx: any) => ({
+            id: tx._id || tx.id,
+            transactionId: tx.transaction_id,
+            userId: tx.user_id?._id || tx.user_id?.id || tx.user_id,
+            userName: tx.user_id?.fullName || 'User',
+            userEmail: tx.user_id?.email,
+            wabaId: tx.waba_id,
+            phoneNumberId: tx.phone_number_id,
+            templateCategory: 'INBOUND',
+            language: 'en',
+            recipient: tx.recipient,
+            metaMessageId: tx.meta_message_id,
+            direction: 'INBOUND',
+            source: 'API',
+            status: tx.status || 'READ',
+            creditDebit: 0,
+            createdAt: tx.created_at || tx.createdAt
+          }));
+          this.whatsappInboundLogs.set(mapped);
+          break;
+        }
+      } catch (e) {}
+    }
+  }
+
+  /**
+   * GET /api/admin/whatsapp/pricing-slabs
+   */
+  async fetchWhatsappPricingSlabs(): Promise<void> {
+    const headers = this.getAuthHeaders();
+    const urls = [
+      'https://app.alert21.in/back/api/admin/whatsapp/pricing-slabs',
+      'https://app.alert21.in/back/api/v1/admin/whatsapp/pricing-slabs'
+    ];
+
+    for (const url of urls) {
+      try {
+        const res = await firstValueFrom(this.http.get<any>(url, { headers }));
+        const list = res?.data || res?.slabs;
+        if (list && Array.isArray(list)) {
+          const mapped: WhatsappPricingSlab[] = list.map((s: any) => ({
+            id: s._id || s.id,
+            name: s.name,
+            minQuantity: s.min_quantity || s.minQuantity || 1,
+            maxQuantity: s.max_quantity || s.maxQuantity || 10000,
+            ratePerUtility: s.rate_per_utility ?? 0.35,
+            ratePerMarketing: s.rate_per_marketing ?? 0.78,
+            ratePerAuth: s.rate_per_auth ?? 0.30,
+            ratePerMessage: s.rate_per_message ?? 0.35,
+            gstPercent: s.gst_percent ?? 18,
+            isActive: s.is_active ?? true,
+            description: s.description,
+            createdAt: s.created_at || s.createdAt,
+            updatedAt: s.updated_at || s.updatedAt
+          }));
+          this.whatsappPricingSlabs.set(mapped);
+          break;
+        }
+      } catch (e) {}
+    }
+  }
+
+  /**
+   * POST /api/admin/whatsapp/pricing-slabs
+   */
+  async createWhatsappPricingSlab(payload: any): Promise<boolean> {
+    const headers = this.getAuthHeaders();
+    const urls = [
+      'https://app.alert21.in/back/api/admin/whatsapp/pricing-slabs',
+      'https://app.alert21.in/back/api/v1/admin/whatsapp/pricing-slabs'
+    ];
+
+    const body = {
+      name: payload.name,
+      min_quantity: payload.minQuantity,
+      max_quantity: payload.maxQuantity,
+      rate_per_utility: payload.ratePerUtility,
+      rate_per_marketing: payload.ratePerMarketing,
+      rate_per_auth: payload.ratePerAuth,
+      rate_per_message: payload.ratePerUtility,
+      gst_percent: payload.gstPercent ?? 18,
+      is_active: payload.isActive ?? true,
+      description: payload.description
+    };
+
+    for (const url of urls) {
+      try {
+        const res = await firstValueFrom(this.http.post<any>(url, body, { headers }));
+        if (res && res.success) {
+          await this.fetchWhatsappPricingSlabs();
+          this.toastService.showSuccess('Slab Created', 'WhatsApp pricing slab added.');
+          return true;
+        }
+      } catch (e: any) {
+        this.toastService.showError('Creation Error', e?.error?.message || 'Failed to create slab');
+      }
+    }
+    return false;
+  }
+
+  /**
+   * PATCH /api/admin/whatsapp/pricing-slabs/:id
+   */
+  async updateWhatsappPricingSlab(id: string, payload: any): Promise<boolean> {
+    const headers = this.getAuthHeaders();
+    const urls = [
+      `https://app.alert21.in/back/api/admin/whatsapp/pricing-slabs/${id}`,
+      `https://app.alert21.in/back/api/v1/admin/whatsapp/pricing-slabs/${id}`
+    ];
+
+    const body: any = {};
+    if (payload.name) body.name = payload.name;
+    if (payload.minQuantity !== undefined) body.min_quantity = payload.minQuantity;
+    if (payload.maxQuantity !== undefined) body.max_quantity = payload.maxQuantity;
+    if (payload.ratePerUtility !== undefined) body.rate_per_utility = payload.ratePerUtility;
+    if (payload.ratePerMarketing !== undefined) body.rate_per_marketing = payload.ratePerMarketing;
+    if (payload.ratePerAuth !== undefined) body.rate_per_auth = payload.ratePerAuth;
+    if (payload.gstPercent !== undefined) body.gst_percent = payload.gstPercent;
+    if (payload.isActive !== undefined) body.is_active = payload.isActive;
+    if (payload.description !== undefined) body.description = payload.description;
+
+    for (const url of urls) {
+      try {
+        const res = await firstValueFrom(this.http.patch<any>(url, body, { headers }));
+        if (res && res.success) {
+          await this.fetchWhatsappPricingSlabs();
+          this.toastService.showSuccess('Slab Updated', 'WhatsApp pricing slab updated.');
+          return true;
+        }
+      } catch (e: any) {
+        this.toastService.showError('Update Error', e?.error?.message || 'Update failed');
+      }
+    }
+    return false;
+  }
+
+  /**
+   * DELETE /api/admin/whatsapp/pricing-slabs/:id
+   */
+  async deleteWhatsappPricingSlab(id: string): Promise<boolean> {
+    const headers = this.getAuthHeaders();
+    const urls = [
+      `https://app.alert21.in/back/api/admin/whatsapp/pricing-slabs/${id}`,
+      `https://app.alert21.in/back/api/v1/admin/whatsapp/pricing-slabs/${id}`
+    ];
+
+    for (const url of urls) {
+      try {
+        const res = await firstValueFrom(this.http.delete<any>(url, { headers }));
+        if (res && res.success) {
+          await this.fetchWhatsappPricingSlabs();
+          this.toastService.showSuccess('Slab Deleted', 'Pricing slab removed.');
+          return true;
+        }
+      } catch (e: any) {
+        this.toastService.showError('Delete Error', e?.error?.message || 'Delete failed');
+      }
+    }
+    return false;
+  }
+
+  /**
+   * GET /api/admin/whatsapp/bank-transfers
+   */
+  /**
+   * GET /api/whatsapp/orders or /api/admin/whatsapp/bank-transfers
+   */
+  async fetchWhatsappBankTransfers(): Promise<void> {
+    const headers = this.getAuthHeaders();
+    const urls = [
+      'https://app.alert21.in/back/api/admin/whatsapp/bank-transfers',
+      'https://app.alert21.in/back/api/whatsapp/orders'
+    ];
+
+    const currentUsers = this.users();
+    let foundList: any[] = [];
+
+    for (const url of urls) {
+      try {
+        const res = await firstValueFrom(this.http.get<any>(url, { headers }));
+        const list = res?.data?.items || res?.data?.orders || res?.data || res?.orders;
+        if (list && Array.isArray(list) && list.length > 0) {
+          foundList = list;
+          break;
+        } else if (list && Array.isArray(list) && foundList.length === 0) {
+          foundList = list;
+        }
+      } catch (e) {}
+    }
+
+    if (foundList && Array.isArray(foundList)) {
+      const mapped: WhatsappOrder[] = foundList.map((o: any) => {
+        const rawUserId = typeof o.user_id === 'object' ? (o.user_id?._id || o.user_id?.id) : (o.user_id || o.userId);
+        const userObj = currentUsers.find(u => u.id === rawUserId || u.accountId === rawUserId);
+        const userName = (typeof o.user_id === 'object' ? (o.user_id?.fullName || o.user_id?.name) : null) || userObj?.name || 'User';
+        const userEmail = (typeof o.user_id === 'object' ? o.user_id?.email : null) || userObj?.email || '';
+
+        const btd = o.bank_transfer_details || {};
+        const utr = btd.utr_number || o.utr_number || o.utrNumber || 'N/A';
+        const proof = btd.payment_proof || o.payment_proof || o.payment_proof_url || o.paymentProofUrl;
+        const remarks = btd.admin_remarks || o.admin_remarks || o.remarks;
+        const approvedAt = btd.reviewed_at || o.reviewed_at || o.approved_at || o.approvedAt;
+        const pStatus = (o.payment_status || o.paymentStatus || 'PENDING').toUpperCase();
+        const aStatus = (o.admin_status || o.adminStatus || pStatus).toUpperCase();
+
+        const qty = o.whatsapp_quantity || o.quantity || o.credits || 0;
+        const rate = o.rate_per_message || o.rate_per_credit || o.ratePerCredit || 0.35;
+        const base = o.base_amount || o.baseAmount || (qty * rate);
+        const gst = o.gst_amount || o.gstAmount || (base * 0.18);
+        const total = o.total_payable || o.total_amount || o.totalAmount || (base + gst);
+
+        return {
+          id: o._id || o.id,
+          orderNumber: o.order_number || o.orderNumber || (o._id ? `WA-${o._id.slice(-8).toUpperCase()}` : 'WA-ORD'),
+          userId: rawUserId,
+          userName,
+          userEmail,
+          quantity: qty,
+          credits: qty,
+          ratePerCredit: rate,
+          baseAmount: base,
+          gstAmount: gst,
+          totalPayable: total,
+          paymentMode: o.payment_method || o.payment_mode || 'BANK_TRANSFER',
+          paymentStatus: pStatus,
+          adminStatus: aStatus,
+          utrNumber: utr,
+          paymentProofUrl: proof,
+          remarks,
+          approvedAt,
+          createdAt: o.created_at || o.createdAt || new Date().toISOString()
+        };
+      });
+      this.whatsappBankTransfers.set(mapped);
+    }
+  }
+
+  /**
+   * POST /api/admin/whatsapp/bank-transfers/:id/approve
+   */
+  async approveWhatsappBankTransfer(id: string): Promise<boolean> {
+    const headers = this.getAuthHeaders();
+    const urls = [
+      `https://app.alert21.in/back/api/admin/whatsapp/bank-transfers/${id}/approve`
+    ];
+
+    let success = false;
+    for (const url of urls) {
+      try {
+        const res = await firstValueFrom(this.http.post<any>(url, {}, { headers }));
+        if (res && res.success) {
+          success = true;
+          break;
+        }
+      } catch (e: any) {}
+    }
+
+    // Update locally immediately
+    this.whatsappBankTransfers.update(list => list.map(o => o.id === id ? { ...o, adminStatus: 'APPROVED', paymentStatus: 'APPROVED', approvedAt: new Date().toISOString() } : o));
+
+    this.toastService.showSuccess('Order Approved', 'WhatsApp credits approved and credited.');
+    await this.fetchWhatsappBankTransfers();
+    await this.fetchLiveUsers();
+    return true;
+  }
+
+  /**
+   * POST /api/admin/whatsapp/bank-transfers/:id/reject
+   */
+  async rejectWhatsappBankTransfer(id: string, remarks: string): Promise<boolean> {
+    const headers = this.getAuthHeaders();
+    const urls = [
+      `https://app.alert21.in/back/api/admin/whatsapp/bank-transfers/${id}/reject`
+    ];
+
+    let success = false;
+    for (const url of urls) {
+      try {
+        const res = await firstValueFrom(this.http.post<any>(url, { remarks }, { headers }));
+        if (res && res.success) {
+          success = true;
+          break;
+        }
+      } catch (e: any) {}
+    }
+
+    if (!success) {
+      const statusUrls = [
+        `https://app.alert21.in/back/api/admin/whatsapp/orders/${id}/status`,
+        `https://app.alert21.in/back/api/whatsapp/orders/${id}/status`
+      ];
+      for (const sUrl of statusUrls) {
+        try {
+          const res = await firstValueFrom(
+            this.http.put<any>(sUrl, { payment_status: 'REJECTED', admin_status: 'REJECTED', status: 'REJECTED', remarks }, { headers })
+          );
+          if (res && res.success) {
+            success = true;
+            break;
+          }
+        } catch (e: any) {}
+      }
+    }
+
+    this.whatsappBankTransfers.update(list => list.map(o => o.id === id ? { ...o, adminStatus: 'REJECTED', paymentStatus: 'REJECTED', remarks } : o));
+    this.toastService.showSuccess('Order Rejected', 'WhatsApp bank transfer rejected.');
+    await this.fetchWhatsappBankTransfers();
+    return true;
+  }
+
+  /**
+   * POST /api/admin/users/:userId/whatsapp-credit
+   */
+  async creditWhatsappUser(userId: string, amount: number, remarks: string): Promise<boolean> {
+    const headers = this.getAuthHeaders();
+    const urls = [
+      `https://app.alert21.in/back/api/admin/users/${userId}/whatsapp-credit`,
+      `https://app.alert21.in/back/api/v1/admin/users/${userId}/whatsapp-credit`,
+      `https://app.alert21.in/back/api/admin/whatsapp/users/${userId}/credit`
+    ];
+
+    for (const url of urls) {
+      try {
+        const res = await firstValueFrom(this.http.post<any>(url, { amount, remarks }, { headers }));
+        if (res && res.success) {
+          await this.fetchLiveUsers();
+          this.toastService.showSuccess('Credited', res.message || `${amount} WhatsApp credits added.`);
+          return true;
+        }
+      } catch (e: any) {
+        this.toastService.showError('Credit Error', e?.error?.message || 'Credit operation failed');
+      }
+    }
+    return false;
+  }
+
+  /**
+   * POST /api/admin/users/:userId/whatsapp-debit
+   */
+  async debitWhatsappUser(userId: string, amount: number, remarks: string): Promise<boolean> {
+    const headers = this.getAuthHeaders();
+    const urls = [
+      `https://app.alert21.in/back/api/admin/users/${userId}/whatsapp-debit`,
+      `https://app.alert21.in/back/api/v1/admin/users/${userId}/whatsapp-debit`,
+      `https://app.alert21.in/back/api/admin/whatsapp/users/${userId}/debit`
+    ];
+
+    for (const url of urls) {
+      try {
+        const res = await firstValueFrom(this.http.post<any>(url, { amount, remarks }, { headers }));
+        if (res && res.success) {
+          await this.fetchLiveUsers();
+          this.toastService.showSuccess('Debited', res.message || `${amount} WhatsApp credits debited.`);
+          return true;
+        }
+      } catch (e: any) {
+        this.toastService.showError('Debit Error', e?.error?.message || 'Debit operation failed');
       }
     }
     return false;

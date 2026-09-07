@@ -565,3 +565,495 @@ export interface EmailDashboardStats {
   complaintRatePercent: number;
 }
 
+// ========================================================
+// TASK #07: META WHATSAPP BUSINESS PLATFORM SAAS MODELS
+// ========================================================
+
+export interface WhatsappProviderConfig {
+  id?: string;
+  providerName: string;
+  metaAppId: string;
+  metaAppSecret?: string;
+  metaAppSecretMasked?: string;
+  embeddedSignupConfigId?: string;
+  graphApiVersion: string;
+  systemUserAccessToken?: string;
+  systemUserAccessTokenMasked?: string;
+  webhookVerifyToken: string;
+  webhookCallbackUrl: string;
+  dataDeletionCallbackUrl?: string;
+  privacyPolicyUrl: string;
+  termsUrl: string;
+  status: 'ACTIVE' | 'INACTIVE';
+  environment: 'PRODUCTION' | 'DEVELOPMENT';
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type WhatsappConnectionStatus = 
+  | 'CONNECTED'
+  | 'ACTION_REQUIRED'
+  | 'TOKEN_EXPIRED'
+  | 'DISCONNECTED'
+  | 'SUSPENDED'
+  | 'FAILED';
+
+export interface WhatsappAccount {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  userMobile?: string;
+  metaBusinessId: string;
+  wabaId: string;
+  wabaName?: string;
+  currency: string;
+  timezoneId: string;
+  connectionStatus: WhatsappConnectionStatus;
+  phoneNumbersCount?: number;
+  templatesCount?: number;
+  phoneNumbers?: WhatsappPhoneNumber[];
+  connectedAt: string;
+  disconnectedAt?: string;
+  lastSyncedAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface WhatsappPhoneNumber {
+  id: string;
+  userId: string;
+  userName?: string;
+  userEmail?: string;
+  wabaId: string;
+  wabaName?: string;
+  accountId?: string;
+  phoneNumberId: string;
+  displayPhoneNumber: string;
+  verifiedName?: string;
+  qualityRating: 'GREEN' | 'YELLOW' | 'RED' | 'UNKNOWN';
+  codeVerificationStatus: string;
+  messagingLimitTier: 'TIER_250' | 'TIER_1K' | 'TIER_10K' | 'TIER_100K' | 'TIER_UNLIMITED';
+  isDefault: boolean;
+  status: 'ACTIVE' | 'PENDING' | 'DISCONNECTED' | 'RESTRICTED' | 'BANNED';
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type WhatsappTemplateCategory = 'UTILITY' | 'AUTHENTICATION' | 'MARKETING';
+export type WhatsappTemplateStatus = 'APPROVED' | 'ACTIVE' | 'PENDING' | 'IN_REVIEW' | 'REJECTED' | 'PAUSED' | 'DISABLED';
+
+export interface WhatsappTemplateButton {
+  type: 'QUICK_REPLY' | 'URL' | 'PHONE_NUMBER';
+  text: string;
+  url?: string;
+  phoneNumber?: string;
+}
+
+export interface WhatsappTemplate {
+  id: string;
+  userId: string;
+  userName?: string;
+  userEmail?: string;
+  wabaId: string;
+  metaTemplateId?: string;
+  name: string;
+  category: WhatsappTemplateCategory;
+  language: string;
+  headerType: 'NONE' | 'TEXT' | 'IMAGE' | 'VIDEO' | 'DOCUMENT';
+  headerContent?: string;
+  body: string;
+  variables?: string[];
+  footer?: string;
+  buttons?: WhatsappTemplateButton[];
+  status: WhatsappTemplateStatus;
+  rejectionReason?: string;
+  lastSyncedAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type WhatsappCampaignStatus = 
+  | 'DRAFT'
+  | 'SCHEDULED'
+  | 'RUNNING'
+  | 'COMPLETED'
+  | 'PAUSED'
+  | 'CANCELLED'
+  | 'FAILED';
+
+export interface WhatsappCampaign {
+  id: string;
+  userId: string;
+  userName?: string;
+  userEmail?: string;
+  name: string;
+  wabaId: string;
+  phoneNumberId: string;
+  displayPhoneNumber?: string;
+  templateId: string;
+  templateName?: string;
+  templateCategory?: WhatsappTemplateCategory;
+  totalAudience: number;
+  queuedCount: number;
+  submittedCount: number;
+  deliveredCount: number;
+  readCount: number;
+  failedCount: number;
+  optoutCount: number;
+  status: WhatsappCampaignStatus;
+  scheduledAt?: string;
+  startedAt?: string;
+  completedAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type WhatsappTransactionStatus = 'SUBMITTED' | 'SENT' | 'DELIVERED' | 'READ' | 'FAILED' | 'PENDING';
+
+export interface WhatsappTransaction {
+  id: string;
+  transactionId: string;
+  userId: string;
+  userName?: string;
+  userEmail?: string;
+  wabaId: string;
+  phoneNumberId: string;
+  templateId?: string;
+  templateName?: string;
+  templateCategory: string;
+  language: string;
+  recipient: string;
+  metaMessageId?: string;
+  direction: 'OUTBOUND' | 'INBOUND';
+  source: 'PANEL' | 'API' | 'CAMPAIGN';
+  campaignId?: string;
+  status: WhatsappTransactionStatus;
+  providerStatus?: string;
+  errorCode?: string;
+  errorMessage?: string;
+  creditDebit: number;
+  ratePerMessage?: number;
+  createdAt: string;
+  sentAt?: string;
+  deliveredAt?: string;
+  readAt?: string;
+  failedAt?: string;
+}
+
+export interface WhatsappWebhookLog {
+  id: string;
+  providerId: string;
+  metaMessageId?: string;
+  eventType: string;
+  recipientId?: string;
+  status?: string;
+  payload: any;
+  receivedAt: string;
+}
+
+export interface WhatsappPricingSlab {
+  id: string;
+  name: string;
+  minQuantity: number;
+  maxQuantity: number;
+  ratePerUtility: number;
+  ratePerMarketing: number;
+  ratePerAuth: number;
+  ratePerMessage?: number;
+  gstPercent: number;
+  isActive: boolean;
+  description?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface WhatsappOrder {
+  id: string;
+  orderNumber: string;
+  userId: string;
+  userName?: string;
+  userEmail?: string;
+  quantity: number;
+  credits: number;
+  ratePerCredit: number;
+  baseAmount: number;
+  gstAmount: number;
+  totalPayable: number;
+  paymentMode: 'ONLINE' | 'BANK_TRANSFER' | 'WALLET' | string;
+  paymentStatus: 'PENDING' | 'COMPLETED' | 'FAILED' | 'APPROVED' | 'REJECTED' | string;
+  adminStatus: 'PENDING' | 'APPROVED' | 'REJECTED' | string;
+  utrNumber?: string;
+  paymentProofUrl?: string;
+  remarks?: string;
+  approvedAt?: string;
+  createdAt: string;
+}
+
+export interface WhatsappDashboardStats {
+  totalConnectedUsers: number;
+  totalWabas: number;
+  totalConnectedPhoneNumbers: number;
+  activeAccounts: number;
+  actionRequiredAccounts: number;
+  disconnectedAccounts: number;
+  totalTemplates: number;
+  approvedTemplates: number;
+  pendingTemplates: number;
+  rejectedTemplates: number;
+  todayMessages: number;
+  todayDelivered: number;
+  todayRead: number;
+  todayFailed: number;
+  activeCampaigns: number;
+  totalCreditsDistributed: number;
+  currentTotalUserBalance: number;
+  totalBillingValue: number;
+  pendingPaymentCount: number;
+  pendingPaymentAmount: number;
+}
+
+// ========================================================
+// TASK #08: BUSINESS SMS, OTP & TRANSACTION RELAY PLATFORM MODELS (SPEC V2.0)
+// ========================================================
+
+export type RelaySourceType = 'GOVT_PORTAL' | 'SAAS' | 'CRM' | 'BANK' | 'CUSTOM';
+
+export interface RelaySource {
+  id: string;
+  sourceCode: string;
+  sourceName: string;
+  sourceType: RelaySourceType;
+  country: string;
+  logoIcon?: string;
+  status: 'ACTIVE' | 'INACTIVE';
+  notes?: string;
+  senderCount?: number;
+  messageTypeCount?: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type RelaySenderMatchMode = 'EXACT' | 'WILDCARD' | 'PREFIX';
+
+export interface RelaySender {
+  id: string;
+  sourceId: string;
+  sourceCode: string;
+  sourceName?: string;
+  senderValue: string;
+  aliasGroup?: string;
+  matchMode: RelaySenderMatchMode;
+  status: 'ACTIVE' | 'INACTIVE';
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type RelayCategoryType = 'OTP' | 'TRANSACTION' | 'LOGIN_SECURITY' | 'BUSINESS_ALERT' | 'CUSTOM';
+
+export interface RelayEventType {
+  id: string;
+  eventKey: string;
+  displayName: string;
+  category: RelayCategoryType;
+  status: 'ACTIVE' | 'INACTIVE';
+  description?: string;
+  createdAt?: string;
+}
+
+export type RelayVariableSensitivity = 'NORMAL' | 'SENSITIVE' | 'SECRET';
+export type RelayVariableDataType = 'string' | 'decimal' | 'integer' | 'date' | 'time' | 'enum' | 'boolean';
+export type RelayVariableMasking = 'none' | 'last4' | 'full-mask' | 'custom';
+
+export interface RelayVariable {
+  id: string;
+  key: string;
+  displayName: string;
+  dataType: RelayVariableDataType;
+  sensitivity: RelayVariableSensitivity;
+  maskingRule: RelayVariableMasking;
+  validationRule?: string;
+  retentionTtlSeconds?: number;
+  webhookAllowed: boolean;
+  uiVisibility: 'list' | 'detail' | 'admin-only';
+  isStandard: boolean;
+  createdAt?: string;
+}
+
+export interface RelayTemplateVariableMapping {
+  variableKey: string;
+  variableName: string;
+  dataType: RelayVariableDataType;
+  sensitivity: RelayVariableSensitivity;
+  sampleValue: string;
+  tokenIndex?: number;
+  required?: boolean;
+}
+
+export interface RelayTemplateVariant {
+  id: string;
+  messageTypeId: string;
+  version: number;
+  priority: number;
+  sampleSmsText: string;
+  patternRegex: string;
+  checksum: string;
+  senderIds: string[];
+  variables: RelayTemplateVariableMapping[];
+  rawMessagePolicy: 'DISABLED' | 'MASKED' | 'FULL';
+  status: 'PUBLISHED' | 'DRAFT' | 'ARCHIVED';
+  publishedAt?: string;
+  publishedBy?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RelayMessageType {
+  id: string;
+  sourceId: string;
+  sourceCode: string;
+  sourceName: string;
+  eventTypeId: string;
+  eventTypeKey: string;
+  name: string;
+  category: RelayCategoryType;
+  sensitive: boolean;
+  activeVariantCount: number;
+  status: 'ACTIVE' | 'INACTIVE';
+  variants: RelayTemplateVariant[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RelayDevice {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  deviceLabel: string;
+  installationId: string;
+  model: string;
+  manufacturer: string;
+  androidVersion: string;
+  appVersion: string;
+  batteryPercent: number;
+  networkType: 'WIFI' | 'MOBILE' | 'ETHERNET' | 'UNKNOWN';
+  status: 'ACTIVE' | 'OFFLINE' | 'REVOKED' | 'PAIRING_PENDING';
+  lastSeenAt: string;
+  configVersion: number;
+  configChecksum: string;
+  smsPermission: boolean;
+  activeMessageTypesCount: number;
+  todayRelayedCount: number;
+  createdAt: string;
+}
+
+export interface RelayEvent {
+  id: string;
+  clientEventId: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  deviceId: string;
+  deviceName: string;
+  sourceCode: string;
+  sourceName: string;
+  sender: string;
+  messageTypeId: string;
+  messageTypeName: string;
+  eventType: string;
+  category: RelayCategoryType;
+  templateId: string;
+  templateVersion: number;
+  receivedAt: string;
+  processedAt: string;
+  messageHash: string;
+  variables: Record<string, any>;
+  maskedVariables: Record<string, any>;
+  rawSms?: string;
+  webhookDeliveryStatus: 'DELIVERED' | 'RETRYING' | 'FAILED' | 'NOT_CONFIGURED';
+  webhookAttempts: number;
+  webhookResponseCode?: number;
+  webhookDeliveryId?: string;
+  webhookDeliveredAt?: string;
+  isDuplicate: boolean;
+}
+
+export interface RelayPackagePlan {
+  id: string;
+  planCode: string;
+  name: string;
+  priceMonthly: number;
+  priceAnnual: number;
+  maxDevices: number;
+  maxActiveMessageTypes: number;
+  includedEvents: number;
+  maxWebhooks: number;
+  maxApiKeys: number;
+  retentionDays: number;
+  overageEnabled: boolean;
+  overagePricePerEvent: number;
+  publicApiAccess: boolean;
+  isActive: boolean;
+  activeSubscribersCount?: number;
+}
+
+export interface RelaySubscription {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  companyName?: string;
+  planId: string;
+  planCode: string;
+  planName: string;
+  billingCycle: 'MONTHLY' | 'ANNUAL';
+  startDate: string;
+  renewalDate: string;
+  status: 'ACTIVE' | 'EXPIRED' | 'PAUSED' | 'CANCELLED';
+  monthlyEventQuota: number;
+  eventsUsedThisMonth: number;
+  activeDevicesCount: number;
+  activeMessageTypesCount: number;
+  overageEventsCount: number;
+  overageAmount: number;
+  overrideLimits?: {
+    maxDevices?: number;
+    maxMessageTypes?: number;
+    includedEvents?: number;
+  };
+}
+
+export interface RelayUnmatchedDiagnostic {
+  id: string;
+  signatureHash: string;
+  sender: string;
+  candidateSourceCode: string;
+  messageLength: number;
+  samplePatternSignature: string;
+  occurrencesCount: number;
+  affectedDevicesCount: number;
+  affectedUsersCount: number;
+  firstSeenAt: string;
+  lastSeenAt: string;
+  status: 'PENDING_REVIEW' | 'TEMPLATE_CREATED' | 'IGNORED';
+}
+
+export interface RelayDashboardStats {
+  activeRelayUsers: number;
+  connectedDevices: number;
+  onlineDevices: number;
+  publishedMessageTypes: number;
+  publishedVariants: number;
+  eventsToday: number;
+  todayOtpEvents: number;
+  todayTransactionEvents: number;
+  matchFailuresToday: number;
+  webhookSuccessRatePercent: number;
+  webhookFailureRatePercent: number;
+  totalRelayRevenue: number;
+  totalSubscribers: number;
+}
+
+
+
