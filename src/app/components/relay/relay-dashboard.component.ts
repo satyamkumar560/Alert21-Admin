@@ -1,4 +1,4 @@
-import { Component, inject, Output, EventEmitter } from '@angular/core';
+import { Component, inject, Output, EventEmitter, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IconComponent } from '../shared/icon.component';
 import { RelayService } from '../../services/relay.service';
@@ -256,9 +256,15 @@ import { NavTab } from '../layout/sidebar.component';
     </div>
   `
 })
-export class RelayDashboardComponent {
+export class RelayDashboardComponent implements OnInit {
   relayService = inject(RelayService);
   @Output() navigate = new EventEmitter<NavTab>();
+
+  ngOnInit() {
+    this.relayService.fetchStats();
+    this.relayService.fetchEvents();
+    this.relayService.fetchMessageTypes();
+  }
 
   navigateTo(tab: NavTab) {
     this.navigate.emit(tab);

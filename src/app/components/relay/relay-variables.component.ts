@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '../shared/icon.component';
@@ -69,6 +69,38 @@ import { RelayVariable, RelayEventType, RelayVariableSensitivity, RelayVariableD
             <option value="SENSITIVE">SENSITIVE</option>
             <option value="SECRET">SECRET (OTP)</option>
           </select>
+        </div>
+
+        <!-- Normaliser Taxonomy & Interactive Sandbox Box -->
+        <div class="bg-indigo-50/70 border border-indigo-200/80 rounded-2xl p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-extrabold text-indigo-950 flex items-center gap-2">
+              <app-icon name="sliders" [size]="14"></app-icon>
+              <span>Built-in Variable Normalisers & Privacy Masks (Page 6 & 16)</span>
+            </span>
+            <span class="text-[10px] font-mono text-indigo-700 bg-white px-2 py-0.5 rounded border border-indigo-200 font-bold">Standard Spec Engine</span>
+          </div>
+
+          <!-- Interactive Normalizer Test Sandbox -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+            <div class="bg-white p-3 rounded-xl border border-indigo-100 shadow-sm space-y-1">
+              <span class="text-[10px] font-bold text-slate-400 uppercase">Amount Cleaner Normaliser</span>
+              <p class="text-[11px] font-mono text-slate-600">"INR 25,000.00" ➔ <strong class="text-emerald-700">"25000.00"</strong></p>
+              <span class="text-[9px] text-slate-400 block">Strips currency symbols & commas to raw float</span>
+            </div>
+
+            <div class="bg-white p-3 rounded-xl border border-indigo-100 shadow-sm space-y-1">
+              <span class="text-[10px] font-bold text-slate-400 uppercase">Account Last4 Normaliser</span>
+              <p class="text-[11px] font-mono text-slate-600">"A/c XX6913" ➔ <strong class="text-indigo-700">"6913"</strong></p>
+              <span class="text-[9px] text-slate-400 block">Extracts exactly 4 terminal bank account digits</span>
+            </div>
+
+            <div class="bg-white p-3 rounded-xl border border-indigo-100 shadow-sm space-y-1">
+              <span class="text-[10px] font-bold text-slate-400 uppercase">Secret OTP Masking</span>
+              <p class="text-[11px] font-mono text-slate-600">"984120" ➔ <strong class="text-rose-700">"••••••"</strong> (TTL 600s)</p>
+              <span class="text-[9px] text-slate-400 block">Masked in UI logs, delivered in encrypted webhook</span>
+            </div>
+          </div>
         </div>
 
         <div class="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden">
@@ -246,8 +278,12 @@ import { RelayVariable, RelayEventType, RelayVariableSensitivity, RelayVariableD
     </div>
   `
 })
-export class RelayVariablesComponent {
+export class RelayVariablesComponent implements OnInit {
   relayService = inject(RelayService);
+
+  ngOnInit() {
+    this.relayService.fetchVariables();
+  }
 
   activeTab: 'variables' | 'events' = 'variables';
   searchQuery = '';

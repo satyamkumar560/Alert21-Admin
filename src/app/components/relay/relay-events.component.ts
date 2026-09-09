@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '../shared/icon.component';
@@ -197,8 +197,12 @@ import { RelayEvent } from '../../models/alert21.models';
     </div>
   `
 })
-export class RelayEventsComponent {
+export class RelayEventsComponent implements OnInit {
   relayService = inject(RelayService);
+
+  ngOnInit() {
+    this.relayService.fetchEvents();
+  }
 
   searchQuery = '';
   categoryFilter = 'ALL';
@@ -256,6 +260,6 @@ export class RelayEventsComponent {
   }
 
   refreshEvents() {
-    // refresh
+    this.relayService.fetchEvents();
   }
 }

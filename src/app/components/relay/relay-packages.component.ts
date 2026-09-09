@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '../shared/icon.component';
@@ -224,8 +224,13 @@ import { RelayPackagePlan, RelaySubscription } from '../../models/alert21.models
     </div>
   `
 })
-export class RelayPackagesComponent {
+export class RelayPackagesComponent implements OnInit {
   relayService = inject(RelayService);
+
+  ngOnInit() {
+    this.relayService.fetchPackages();
+    this.relayService.fetchSubscriptions();
+  }
 
   activeTab: 'packages' | 'subscriptions' = 'packages';
 

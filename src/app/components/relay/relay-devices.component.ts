@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '../shared/icon.component';
@@ -148,8 +148,12 @@ import { RelayDevice } from '../../models/alert21.models';
     </div>
   `
 })
-export class RelayDevicesComponent {
+export class RelayDevicesComponent implements OnInit {
   relayService = inject(RelayService);
+
+  ngOnInit() {
+    this.relayService.fetchDevices();
+  }
 
   searchQuery = '';
   statusFilter = 'ALL';
@@ -170,7 +174,7 @@ export class RelayDevicesComponent {
   }
 
   refreshDevices() {
-    // triggers refresh
+    this.relayService.fetchDevices();
   }
 
   revoke(id: string) {

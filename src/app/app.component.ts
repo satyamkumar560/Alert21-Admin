@@ -234,6 +234,8 @@ export class AppComponent implements OnInit {
     'dlt-hash-tool', 'sms-logs', 'audit-logs', 'settings'
   ];
 
+  constructor() {}
+
   ngOnInit() {
     this.restoreActiveTab();
   }

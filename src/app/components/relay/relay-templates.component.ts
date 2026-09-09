@@ -1,4 +1,4 @@
-import { Component, inject, Output, EventEmitter } from '@angular/core';
+import { Component, inject, Output, EventEmitter, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '../shared/icon.component';
@@ -58,64 +58,78 @@ import { NavTab } from '../layout/sidebar.component';
                 <app-icon name="file-text" [size]="20"></app-icon>
               </div>
               <div>
-                <div class="flex items-center gap-2 flex-wrap">
-                  <h3 class="font-extrabold text-slate-900 text-base">{{ msg.name }}</h3>
-                  <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider"
-                    [ngClass]="msg.category === 'OTP' ? 'bg-purple-100 text-purple-800' : (msg.category === 'TRANSACTION' ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800')">
+                <div class="flex items-center gap-2">
+                  <h3 class="font-bold text-slate-900 text-sm">{{ msg.name }}</h3>
+                  <span class="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase"
+                    [ngClass]="{
+                      'bg-purple-100 text-purple-700': msg.category === 'OTP',
+                      'bg-emerald-100 text-emerald-700': msg.category === 'TRANSACTION',
+                      'bg-amber-100 text-amber-700': msg.category === 'LOGIN_SECURITY',
+                      'bg-blue-100 text-blue-700': msg.category === 'BUSINESS_ALERT'
+                    }">
                     {{ msg.category }}
                   </span>
-                  <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-bold font-mono text-[10px]">
+                  <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-mono text-[10px] font-bold">
                     {{ msg.sourceCode }}
                   </span>
                 </div>
-                <div class="flex items-center gap-2 mt-1 text-xs text-slate-500 font-mono">
-                  <span class="text-indigo-600 font-bold">{{ msg.eventTypeKey }}</span>
+                <div class="flex items-center gap-3 mt-1 text-[11px] text-slate-500 font-mono">
+                  <span>Event: <strong class="text-indigo-600">{{ msg.eventTypeKey }}</strong></span>
                   <span>•</span>
-                  <span>{{ msg.variants.length }} Variants / Versions Published</span>
+                  <span>Variants: {{ msg.variants.length }} active</span>
                 </div>
               </div>
             </div>
 
-            <!-- Header Quick Badge -->
             <div class="flex items-center gap-2">
-              <span class="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200 flex items-center gap-1">
-                <app-icon name="check-circle" [size]="12"></app-icon>
-                <span>Active Published Engine</span>
+              <span class="px-2.5 py-1 rounded-full text-[10px] font-bold"
+                [ngClass]="msg.status === 'ACTIVE' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-600'">
+                ● {{ msg.status }}
               </span>
             </div>
           </div>
 
-          <!-- Variants Table inside Accordion -->
-          <div class="p-5 space-y-3">
-            <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Published Template Variants</h4>
-            
-            <div *ngFor="let variant of msg.variants; let vIdx = index" class="p-4 rounded-xl border border-slate-200/80 bg-slate-50/20 space-y-3">
-              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/60 pb-2">
+          <!-- Variants Sub-list -->
+          <div class="p-5 space-y-4">
+            <div *ngFor="let variant of msg.variants; let vIndex = index" class="p-4 rounded-xl border border-slate-100 bg-slate-50/50 space-y-3">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div class="flex items-center gap-2">
-                  <span class="px-2 py-0.5 rounded-md bg-indigo-600 text-white font-mono font-black text-xs">v{{ variant.version }}</span>
-                  <span class="text-xs font-bold text-slate-800">{{ vIdx === 0 ? 'Current Active Version (Latest)' : 'Historical Archive Version' }}</span>
-                  <span class="font-mono text-[10px] text-slate-400">[{{ variant.checksum }}]</span>
+                  <span class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 font-bold text-xs flex items-center justify-center">
+                    V{{ variant.version }}
+                  </span>
+                  <span class="font-mono text-xs font-semibold text-slate-800">{{ vIndex === 0 ? 'Current Active (v' + variant.version + ')' : 'Variant (v' + variant.version + ')' }}</span>
+                  <span *ngIf="vIndex === 0" class="px-2 py-0.5 rounded bg-indigo-600 text-white text-[9px] font-bold uppercase tracking-wider">
+                    Default
+                  </span>
+                  <span class="text-[10px] text-slate-400 font-mono">SHA: {{ variant.checksum | slice:0:8 }}</span>
                 </div>
 
-                <div class="flex items-center gap-2 text-[11px] text-slate-500">
-                  <span>Published {{ variant.publishedAt | date:'mediumDate' }} by {{ variant.publishedBy }}</span>
-                  <button *ngIf="vIdx > 0" (click)="rollback(msg.id, variant.id)" class="px-2 py-1 rounded bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold text-[10px] border border-amber-200 flex items-center gap-1 transition-all">
-                    <app-icon name="rotate-ccw" [size]="10"></app-icon>
-                    <span>Rollback to v{{ variant.version }}</span>
+                <div class="flex items-center gap-2">
+                  <button 
+                    *ngIf="vIndex > 0" 
+                    (click)="rollback(msg.id, variant.id)" 
+                    class="px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-[11px] font-bold text-slate-700 flex items-center gap-1 shadow-sm transition-all">
+                    <app-icon name="rotate-ccw" [size]="12"></app-icon>
+                    <span>Set Default</span>
                   </button>
                 </div>
               </div>
 
-              <!-- Sample Text Preview -->
-              <div>
-                <p class="text-[11px] text-slate-400 font-bold uppercase mb-1">Sample SMS Template</p>
-                <div class="p-2.5 bg-white rounded-lg border border-slate-200 font-mono text-xs text-slate-800 leading-relaxed">
-                  {{ variant.sampleSmsText }}
+              <!-- Sample Pattern & Regex Preview -->
+              <div class="space-y-1.5">
+                <div class="text-[11px] font-medium text-slate-600 bg-white p-2.5 rounded-lg border border-slate-200/60 font-sans">
+                  <strong class="text-slate-400 text-[10px] uppercase block mb-0.5 font-bold">Sample SMS Template:</strong>
+                  "{{ variant.sampleSmsText }}"
+                </div>
+                
+                <div class="text-[11px] font-mono text-indigo-900 bg-indigo-50/60 p-2.5 rounded-lg border border-indigo-100 break-all">
+                  <strong class="text-indigo-400 text-[10px] uppercase block mb-0.5 font-bold">Compiled Regex Pattern:</strong>
+                  <code>{{ variant.patternRegex }}</code>
                 </div>
               </div>
 
-              <!-- Senders & Extracted Variables Grid -->
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <!-- Senders and Variables Badges -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
                 <div>
                   <span class="text-[10px] font-bold text-slate-400 uppercase">Allowed Senders</span>
                   <div class="flex flex-wrap gap-1.5 mt-1">
@@ -141,9 +155,13 @@ import { NavTab } from '../layout/sidebar.component';
     </div>
   `
 })
-export class RelayTemplatesComponent {
+export class RelayTemplatesComponent implements OnInit {
   relayService = inject(RelayService);
   @Output() navigate = new EventEmitter<NavTab>();
+
+  ngOnInit() {
+    this.relayService.fetchMessageTypes();
+  }
 
   searchQuery = '';
   categoryFilter = 'ALL';

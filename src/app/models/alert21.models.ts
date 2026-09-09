@@ -827,6 +827,8 @@ export interface RelaySource {
   country: string;
   logoIcon?: string;
   status: 'ACTIVE' | 'INACTIVE';
+  dashboardAllowed?: boolean;
+  webhookAllowed?: boolean;
   notes?: string;
   senderCount?: number;
   messageTypeCount?: number;
@@ -842,6 +844,9 @@ export interface RelaySender {
   sourceCode: string;
   sourceName?: string;
   senderValue: string;
+  normalisedSender?: string;
+  priority?: number;
+  exactMatch?: boolean;
   aliasGroup?: string;
   matchMode: RelaySenderMatchMode;
   status: 'ACTIVE' | 'INACTIVE';
@@ -897,6 +902,13 @@ export interface RelayTemplateVariant {
   messageTypeId: string;
   version: number;
   priority: number;
+  direction?: 'credit' | 'debit' | 'n/a';
+  paymentMode?: 'UPI' | 'IMPS' | 'NEFT' | 'RTGS' | 'CARD' | 'OTHER' | 'N/A';
+  requiredKeywords?: string[];
+  forbiddenKeywords?: string[];
+  caseInsensitive?: boolean;
+  whitespaceNormalisation?: boolean;
+  linebreakNormalisation?: boolean;
   sampleSmsText: string;
   patternRegex: string;
   checksum: string;
@@ -908,6 +920,15 @@ export interface RelayTemplateVariant {
   publishedBy?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface RelayDraftTemplate {
+  sourceId?: string;
+  sourceCode?: string;
+  senderValue?: string;
+  sampleSmsText?: string;
+  messageTypeName?: string;
+  category?: RelayCategoryType;
 }
 
 export interface RelayMessageType {

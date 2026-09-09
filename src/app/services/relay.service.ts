@@ -13,10 +13,26 @@ import {
   RelayPackagePlan, 
   RelaySubscription, 
   RelayUnmatchedDiagnostic, 
-  RelayDashboardStats 
+  RelayDashboardStats,
+  RelayDraftTemplate
 } from '../models/alert21.models';
 import { AuthService } from './auth.service';
 import { ToastService } from './toast.service';
+
+const STANDARD_RELAY_VARIABLES: RelayVariable[] = [
+  { id: 'v_otp', key: 'otp', displayName: 'One-Time Password (OTP)', dataType: 'string', sensitivity: 'SECRET', maskingRule: 'full-mask', retentionTtlSeconds: 600, webhookAllowed: true, uiVisibility: 'list', isStandard: true },
+  { id: 'v_amount', key: 'amount', displayName: 'Transaction Amount', dataType: 'decimal', sensitivity: 'NORMAL', maskingRule: 'none', retentionTtlSeconds: 86400, webhookAllowed: true, uiVisibility: 'list', isStandard: true },
+  { id: 'v_account_last4', key: 'account_last4', displayName: 'Account Last 4 Digits', dataType: 'string', sensitivity: 'SENSITIVE', maskingRule: 'last4', retentionTtlSeconds: 86400, webhookAllowed: true, uiVisibility: 'list', isStandard: true },
+  { id: 'v_card_last4', key: 'card_last4', displayName: 'Card Last 4 Digits', dataType: 'string', sensitivity: 'SENSITIVE', maskingRule: 'last4', retentionTtlSeconds: 86400, webhookAllowed: true, uiVisibility: 'list', isStandard: true },
+  { id: 'v_reference', key: 'reference', displayName: 'Reference / UTR / Txn ID', dataType: 'string', sensitivity: 'NORMAL', maskingRule: 'none', retentionTtlSeconds: 86400, webhookAllowed: true, uiVisibility: 'list', isStandard: true },
+  { id: 'v_utr', key: 'utr', displayName: 'Bank UTR Number', dataType: 'string', sensitivity: 'NORMAL', maskingRule: 'none', retentionTtlSeconds: 86400, webhookAllowed: true, uiVisibility: 'list', isStandard: true },
+  { id: 'v_payment_mode', key: 'payment_mode', displayName: 'Payment Mode (UPI/IMPS/NEFT)', dataType: 'enum', sensitivity: 'NORMAL', maskingRule: 'none', retentionTtlSeconds: 86400, webhookAllowed: true, uiVisibility: 'list', isStandard: true },
+  { id: 'v_counterparty', key: 'counterparty', displayName: 'Counterparty / Sender VPA', dataType: 'string', sensitivity: 'NORMAL', maskingRule: 'none', retentionTtlSeconds: 86400, webhookAllowed: true, uiVisibility: 'list', isStandard: true },
+  { id: 'v_merchant', key: 'merchant', displayName: 'Merchant / Store Name', dataType: 'string', sensitivity: 'NORMAL', maskingRule: 'none', retentionTtlSeconds: 86400, webhookAllowed: true, uiVisibility: 'list', isStandard: true },
+  { id: 'v_balance', key: 'balance', displayName: 'Available Balance', dataType: 'decimal', sensitivity: 'SENSITIVE', maskingRule: 'none', retentionTtlSeconds: 86400, webhookAllowed: true, uiVisibility: 'list', isStandard: true },
+  { id: 'v_expiry_minutes', key: 'expiry_minutes', displayName: 'OTP Validity Expiry (Mins)', dataType: 'integer', sensitivity: 'NORMAL', maskingRule: 'none', retentionTtlSeconds: 600, webhookAllowed: true, uiVisibility: 'list', isStandard: true },
+  { id: 'v_transaction_date', key: 'transaction_date', displayName: 'Transaction Date', dataType: 'date', sensitivity: 'NORMAL', maskingRule: 'none', retentionTtlSeconds: 86400, webhookAllowed: true, uiVisibility: 'list', isStandard: true }
+];
 
 @Injectable({
   providedIn: 'root'
@@ -40,10 +56,13 @@ export class RelayService {
   subscriptions = signal<RelaySubscription[]>([]);
   diagnostics = signal<RelayUnmatchedDiagnostic[]>([]);
   stats = signal<RelayDashboardStats | null>(null);
+  builderDraft = signal<RelayDraftTemplate | null>(null);
   isLoading = signal<boolean>(false);
 
+  private isFetching = false;
+
   constructor() {
-    this.fetchLiveRelayData();
+    // Zero background polling, zero intervals, zero focus listeners
   }
 
   private getAuthHeaders(): HttpHeaders {
@@ -55,330 +74,367 @@ export class RelayService {
   }
 
   // ==========================================
-  // LIVE BACKEND API SYNC
+  // GRANULAR ON-DEMAND API FETCH METHODS (ONLY HITS WHAT USER CLICKS)
   // ==========================================
-  async fetchLiveRelayData() {
+  async fetchStats() {
     const token = this.authService.authToken();
     if (!token) return;
-
-    this.isLoading.set(true);
-    const headers = this.getAuthHeaders();
-
     try {
-      // 1. Stats
-      try {
-        const statsRes = await firstValueFrom(this.http.get<any>(`${this.baseUrl}/stats`, { headers }));
-        if (statsRes && (statsRes.success || statsRes.data)) {
-          this.stats.set(statsRes.data || statsRes);
-        }
-      } catch (e) {}
-
-      // 2. Sources
-      try {
-        const srcRes = await firstValueFrom(this.http.get<any>(`${this.baseUrl}/sources`, { headers }));
-        if (srcRes && srcRes.success && Array.isArray(srcRes.data)) {
-          this.sources.set(srcRes.data.map((s: any) => ({
-            id: s._id || s.id,
-            sourceCode: s.source_code,
-            sourceName: s.name,
-            sourceType: s.source_type,
-            country: s.country,
-            logoIcon: s.logo_icon || 'layers',
-            status: s.status,
-            notes: s.notes || '',
-            senderCount: s.sender_count || 0,
-            messageTypeCount: s.message_type_count || 0,
-            createdAt: s.createdAt,
-            updatedAt: s.updatedAt
-          })));
-        } else {
-          this.sources.set([]);
-        }
-      } catch (e) {
-        this.sources.set([]);
+      const headers = this.getAuthHeaders();
+      const res = await firstValueFrom(this.http.get<any>(`${this.baseUrl}/stats`, { headers }));
+      if (res && (res.success || res.data)) {
+        this.stats.set(res.data || res);
       }
+    } catch (e) {
+      console.error('Fetch stats error:', e);
+    }
+  }
 
-      // 3. Senders
-      try {
-        const sndRes = await firstValueFrom(this.http.get<any>(`${this.baseUrl}/senders`, { headers }));
-        if (sndRes && sndRes.success && Array.isArray(sndRes.data)) {
-          this.senders.set(sndRes.data.map((snd: any) => ({
-            id: snd._id || snd.id,
-            sourceId: typeof snd.source_id === 'object' && snd.source_id !== null ? (snd.source_id._id || snd.source_id.id) : (snd.source_id || ''),
-            sourceCode: snd.source_code || (typeof snd.source_id === 'object' ? snd.source_id?.source_code : ''),
-            sourceName: snd.source_name || (typeof snd.source_id === 'object' ? snd.source_id?.name : ''),
-            senderValue: snd.sender_value,
-            aliasGroup: snd.alias_group || '',
-            matchMode: snd.match_mode || 'EXACT',
-            status: snd.status || 'ACTIVE',
-            createdAt: snd.createdAt,
-            updatedAt: snd.updatedAt
-          })));
-        } else {
-          this.senders.set([]);
-        }
-      } catch (e) {
-        this.senders.set([]);
+  async fetchSources() {
+    const token = this.authService.authToken();
+    if (!token) return;
+    try {
+      this.isLoading.set(true);
+      const headers = this.getAuthHeaders();
+      const res = await firstValueFrom(this.http.get<any>(`${this.baseUrl}/sources`, { headers }));
+      if (res && res.success && Array.isArray(res.data)) {
+        this.sources.set(res.data.map((s: any) => ({
+          id: s._id || s.id,
+          sourceCode: s.source_code,
+          sourceName: s.name,
+          sourceType: s.source_type,
+          country: s.country,
+          logoIcon: s.logo_icon || 'layers',
+          status: s.status,
+          dashboardAllowed: s.dashboard_allowed ?? true,
+          webhookAllowed: s.webhook_allowed ?? true,
+          notes: s.notes || '',
+          senderCount: s.sender_count || 0,
+          messageTypeCount: s.message_type_count || 0,
+          createdAt: s.createdAt,
+          updatedAt: s.updatedAt
+        })));
       }
+    } catch (e) {
+      console.error('Fetch sources error:', e);
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
 
-      // 4. Variables
-      try {
-        const varRes = await firstValueFrom(this.http.get<any>(`${this.baseUrl}/variables`, { headers }));
-        if (varRes && varRes.success && Array.isArray(varRes.data)) {
-          this.variables.set(varRes.data.map((v: any) => ({
+  async fetchSenders() {
+    const token = this.authService.authToken();
+    if (!token) return;
+    try {
+      const headers = this.getAuthHeaders();
+      const res = await firstValueFrom(this.http.get<any>(`${this.baseUrl}/senders`, { headers }));
+      if (res && res.success && Array.isArray(res.data)) {
+        this.senders.set(res.data.map((snd: any) => ({
+          id: snd._id || snd.id,
+          sourceId: typeof snd.source_id === 'object' && snd.source_id !== null ? (snd.source_id._id || snd.source_id.id) : (snd.source_id || ''),
+          sourceCode: snd.source_code || (typeof snd.source_id === 'object' ? snd.source_id?.source_code : ''),
+          sourceName: snd.source_name || (typeof snd.source_id === 'object' ? snd.source_id?.name : ''),
+          senderValue: snd.sender_value,
+          normalisedSender: snd.normalised_sender || snd.sender_value?.replace(/^[A-Za-z]{2}-/, ''),
+          priority: snd.priority || 100,
+          exactMatch: snd.exact_match ?? true,
+          aliasGroup: snd.alias_group || '',
+          matchMode: snd.match_mode || 'EXACT',
+          status: snd.status || 'ACTIVE',
+          createdAt: snd.createdAt,
+          updatedAt: snd.updatedAt
+        })));
+      }
+    } catch (e) {
+      console.error('Fetch senders error:', e);
+    }
+  }
+
+  async fetchVariables() {
+    const token = this.authService.authToken();
+    if (!token) return;
+    try {
+      const headers = this.getAuthHeaders();
+      const res = await firstValueFrom(this.http.get<any>(`${this.baseUrl}/variables`, { headers }));
+      if (res && res.success && Array.isArray(res.data)) {
+        const fetchedVars = res.data.map((v: any) => ({
+          id: v._id || v.id,
+          key: v.key,
+          displayName: v.display_name,
+          dataType: v.data_type,
+          sensitivity: v.sensitivity,
+          maskingRule: v.masking_rule || 'none',
+          validationRule: v.validation_rule || '',
+          retentionTtlSeconds: v.retention_ttl_seconds || 86400,
+          webhookAllowed: v.webhook_allowed ?? true,
+          uiVisibility: v.ui_visibility || 'list',
+          isStandard: v.is_standard ?? false,
+          createdAt: v.createdAt
+        }));
+        const existingKeys = new Set(fetchedVars.map((fv: any) => fv.key));
+        const standardToAdd = STANDARD_RELAY_VARIABLES.filter(sv => !existingKeys.has(sv.key));
+        this.variables.set([...fetchedVars, ...standardToAdd]);
+      } else if (this.variables().length === 0) {
+        this.variables.set(STANDARD_RELAY_VARIABLES);
+      }
+    } catch (e) {
+      console.error('Fetch variables error:', e);
+      if (this.variables().length === 0) {
+        this.variables.set(STANDARD_RELAY_VARIABLES);
+      }
+    }
+  }
+
+  async fetchMessageTypes() {
+    const token = this.authService.authToken();
+    if (!token) return;
+    try {
+      this.isLoading.set(true);
+      const headers = this.getAuthHeaders();
+      const res = await firstValueFrom(this.http.get<any>(`${this.baseUrl}/message-types`, { headers }));
+      if (res && res.success && Array.isArray(res.data)) {
+        this.messageTypes.set(res.data.map((m: any) => ({
+          id: m._id || m.id,
+          sourceId: m.source_id,
+          sourceCode: m.source_code,
+          sourceName: m.source_name,
+          eventTypeId: m.event_type_id || '',
+          eventTypeKey: m.event_type || 'portal.otp.received',
+          name: m.name,
+          category: m.category || 'OTP',
+          sensitive: m.sensitive ?? false,
+          activeVariantCount: Array.isArray(m.variants) ? m.variants.length : 1,
+          status: m.status || 'ACTIVE',
+          createdAt: m.createdAt,
+          updatedAt: m.updatedAt,
+          variants: Array.isArray(m.variants) && m.variants.length > 0 ? m.variants.map((v: any) => ({
             id: v._id || v.id,
-            key: v.key,
-            displayName: v.display_name,
-            dataType: v.data_type,
-            sensitivity: v.sensitivity,
-            maskingRule: v.masking_rule || 'none',
-            validationRule: v.validation_rule || '',
-            retentionTtlSeconds: v.retention_ttl_seconds || 86400,
-            webhookAllowed: v.webhook_allowed ?? true,
-            uiVisibility: v.ui_visibility || 'list',
-            isStandard: v.is_standard ?? false,
-            createdAt: v.createdAt
-          })));
-        } else {
-          this.variables.set([]);
-        }
-      } catch (e) {
-        this.variables.set([]);
-      }
-
-      // 5. Message Types & Template Variants
-      try {
-        const msgRes = await firstValueFrom(this.http.get<any>(`${this.baseUrl}/message-types`, { headers }));
-        if (msgRes && msgRes.success && Array.isArray(msgRes.data)) {
-          this.messageTypes.set(msgRes.data.map((m: any) => ({
-            id: m._id || m.id,
-            sourceId: m.source_id,
-            sourceCode: m.source_code,
-            sourceName: m.source_name,
-            eventTypeId: m.event_type_id || '',
-            eventTypeKey: m.event_type || 'portal.otp.received',
-            name: m.name,
-            category: m.category || 'OTP',
-            sensitive: m.sensitive ?? false,
-            activeVariantCount: Array.isArray(m.variants) ? m.variants.length : 1,
-            status: m.status || 'ACTIVE',
-            createdAt: m.createdAt,
-            updatedAt: m.updatedAt,
-            variants: Array.isArray(m.variants) && m.variants.length > 0 ? m.variants.map((v: any) => ({
-              id: v._id || v.id,
+            messageTypeId: m._id || m.id,
+            version: v.version || 1,
+            priority: v.priority || 10,
+            sampleSmsText: v.sample_sms_text || v.sample_template || '',
+            patternRegex: v.pattern_regex || '',
+            checksum: v.checksum || 'sha256:live',
+            senderIds: v.sender_ids || v.sender_aliases || [],
+            variables: (v.variables || []).map((vm: any) => ({
+              variableKey: vm.key || vm.variableKey || vm.name || 'var',
+              variableName: vm.name || vm.variableName || vm.key || 'Variable',
+              dataType: vm.data_type || vm.dataType || 'string',
+              sensitivity: vm.sensitivity || 'NORMAL',
+              sampleValue: vm.sample_value || vm.sampleValue || ''
+            })),
+            rawMessagePolicy: v.raw_message_policy || 'DISABLED',
+            status: v.status || 'PUBLISHED',
+            publishedAt: v.published_at || v.createdAt,
+            publishedBy: v.published_by || 'Admin',
+            createdAt: v.createdAt,
+            updatedAt: v.updatedAt
+          })) : [
+            {
+              id: `var_${m._id || m.id}`,
               messageTypeId: m._id || m.id,
-              version: v.version || 1,
-              priority: v.priority || 10,
-              sampleSmsText: v.sample_sms_text || v.sample_template || '',
-              patternRegex: v.pattern_regex || '',
-              checksum: v.checksum || 'sha256:live',
-              senderIds: v.sender_ids || v.sender_aliases || [],
-              variables: (v.variables || []).map((vm: any) => ({
+              version: m.version || 1,
+              priority: 10,
+              sampleSmsText: m.sample_template || '',
+              patternRegex: m.pattern_regex || '',
+              checksum: 'sha256:live',
+              senderIds: m.sender_aliases || [],
+              variables: (m.variables || []).map((vm: any) => ({
                 variableKey: vm.key || vm.variableKey || vm.name || 'var',
                 variableName: vm.name || vm.variableName || vm.key || 'Variable',
                 dataType: vm.data_type || vm.dataType || 'string',
                 sensitivity: vm.sensitivity || 'NORMAL',
                 sampleValue: vm.sample_value || vm.sampleValue || ''
               })),
-              rawMessagePolicy: v.raw_message_policy || 'DISABLED',
-              status: v.status || 'PUBLISHED',
-              publishedAt: v.published_at || v.createdAt,
-              publishedBy: v.published_by || 'Admin',
-              createdAt: v.createdAt,
-              updatedAt: v.updatedAt
-            })) : [
-              {
-                id: `var_${m._id || m.id}`,
-                messageTypeId: m._id || m.id,
-                version: m.version || 1,
-                priority: 10,
-                sampleSmsText: m.sample_template || '',
-                patternRegex: m.pattern_regex || '',
-                checksum: 'sha256:live',
-                senderIds: m.sender_aliases || [],
-                variables: (m.variables || []).map((vm: any) => ({
-                  variableKey: vm.key || vm.variableKey || vm.name || 'var',
-                  variableName: vm.name || vm.variableName || vm.key || 'Variable',
-                  dataType: vm.data_type || vm.dataType || 'string',
-                  sensitivity: vm.sensitivity || 'NORMAL',
-                  sampleValue: vm.sample_value || vm.sampleValue || ''
-                })),
-                rawMessagePolicy: 'DISABLED',
-                status: 'PUBLISHED',
-                publishedAt: m.updatedAt || m.createdAt,
-                publishedBy: 'Admin',
-                createdAt: m.createdAt,
-                updatedAt: m.updatedAt
-              }
-            ]
-          })));
-        } else {
-          this.messageTypes.set([]);
-        }
-      } catch (e) {
-        this.messageTypes.set([]);
+              rawMessagePolicy: 'DISABLED',
+              status: 'PUBLISHED',
+              publishedAt: m.updatedAt || m.createdAt,
+              publishedBy: 'Admin',
+              createdAt: m.createdAt,
+              updatedAt: m.updatedAt
+            }
+          ]
+        })));
       }
-
-      // 6. Devices Fleet
-      try {
-        const devRes = await firstValueFrom(this.http.get<any>(`${this.baseUrl}/devices`, { headers }));
-        if (devRes && devRes.success && Array.isArray(devRes.data)) {
-          this.devices.set(devRes.data.map((d: any) => ({
-            id: d._id || d.id,
-            userId: d.user_id?._id || d.user_id || '',
-            userName: d.user_id?.name || 'User',
-            userEmail: d.user_id?.email || '',
-            deviceLabel: d.device_label || 'Android Device',
-            installationId: d.installation_id || '',
-            model: d.model || 'Device',
-            manufacturer: d.manufacturer || 'Android',
-            androidVersion: d.android_version || '15',
-            appVersion: d.app_version || '1.0.0',
-            batteryPercent: d.battery_percent ?? 100,
-            networkType: d.network_type || 'WIFI',
-            status: d.connection_status === 'ONLINE' ? 'ACTIVE' : (d.connection_status || 'ACTIVE'),
-            lastSeenAt: d.last_seen_at ? new Date(d.last_seen_at).toLocaleTimeString() : 'Recently',
-            configVersion: d.config_version || 1,
-            configChecksum: d.config_checksum || 'sha256:live',
-            smsPermission: d.sms_permission ?? true,
-            activeMessageTypesCount: d.active_message_types_count || 0,
-            todayRelayedCount: d.today_relayed_count || 0,
-            createdAt: d.createdAt
-          })));
-        } else {
-          this.devices.set([]);
-        }
-      } catch (e) {
-        this.devices.set([]);
-      }
-
-      // 7. Ingested Events
-      try {
-        const evtsRes = await firstValueFrom(this.http.get<any>(`${this.baseUrl}/events`, { headers }));
-        if (evtsRes && evtsRes.success && Array.isArray(evtsRes.data)) {
-          this.events.set(evtsRes.data.map((evt: any) => ({
-            id: evt._id || evt.id,
-            clientEventId: evt.client_event_id || evt._id,
-            userId: evt.user_id?._id || evt.user_id || '',
-            userName: evt.user_id?.name || 'User',
-            userEmail: evt.user_id?.email || '',
-            deviceId: evt.device_id?._id || evt.device_id || '',
-            deviceName: evt.device_id?.device_label || 'Android Device',
-            sourceCode: evt.source_code || '',
-            sourceName: evt.source_name || '',
-            sender: evt.sender || '',
-            messageTypeId: evt.message_type_id?._id || evt.message_type_id || '',
-            messageTypeName: evt.message_type_id?.name || evt.message_type_name || 'SMS Event',
-            eventType: evt.message_type_id?.event_type || 'portal.otp.received',
-            category: evt.category || 'OTP',
-            templateId: evt.template_id || '',
-            templateVersion: evt.template_version || 1,
-            receivedAt: evt.received_at || evt.createdAt,
-            processedAt: evt.createdAt,
-            messageHash: evt.message_hash || '',
-            variables: evt.variables || {},
-            maskedVariables: evt.masked_variables || evt.variables || {},
-            webhookDeliveryStatus: evt.webhook_status || 'DELIVERED',
-            webhookAttempts: evt.webhook_attempts || 1,
-            webhookResponseCode: evt.http_response_code || 200,
-            webhookDeliveryId: 'whd_' + (evt._id || ''),
-            webhookDeliveredAt: evt.webhook_delivered_at || evt.createdAt,
-            isDuplicate: evt.is_duplicate || false
-          })));
-        } else {
-          this.events.set([]);
-        }
-      } catch (e) {
-        this.events.set([]);
-      }
-
-      // 8. Packages
-      try {
-        const pkgRes = await firstValueFrom(this.http.get<any>(`${this.baseUrl}/packages`, { headers }));
-        if (pkgRes && pkgRes.success && Array.isArray(pkgRes.data)) {
-          this.packages.set(pkgRes.data.map((p: any) => ({
-            id: p._id || p.id,
-            planCode: p.plan_code,
-            name: p.name,
-            priceMonthly: p.price_monthly,
-            priceAnnual: p.price_annual,
-            maxDevices: p.max_devices,
-            maxActiveMessageTypes: p.max_active_message_types,
-            includedEvents: p.included_events,
-            maxWebhooks: p.max_webhooks,
-            maxApiKeys: p.max_api_keys,
-            retentionDays: p.retention_days,
-            overageEnabled: p.overage_enabled ?? true,
-            overagePricePerEvent: p.overage_price_per_event || 0.05,
-            publicApiAccess: p.public_api_access ?? true,
-            isActive: p.is_active ?? true,
-            activeSubscribersCount: p.active_subscribers_count || 0
-          })));
-        } else {
-          this.packages.set([]);
-        }
-      } catch (e) {
-        this.packages.set([]);
-      }
-
-      // 9. Subscriptions
-      try {
-        const subRes = await firstValueFrom(this.http.get<any>(`${this.baseUrl}/subscriptions`, { headers }));
-        if (subRes && subRes.success && Array.isArray(subRes.data)) {
-          this.subscriptions.set(subRes.data.map((sub: any) => ({
-            id: sub._id || sub.id,
-            userId: sub.user_id?._id || sub.user_id || '',
-            userName: sub.user_id?.name || 'Subscriber',
-            userEmail: sub.user_id?.email || '',
-            companyName: sub.user_id?.company || 'Company',
-            planId: sub.plan_id?._id || sub.plan_id || '',
-            planCode: sub.plan_code || 'relay_plan',
-            planName: sub.plan_name || 'Relay Plan',
-            billingCycle: sub.billing_cycle || 'MONTHLY',
-            startDate: sub.start_date || sub.createdAt,
-            renewalDate: sub.renewal_date || sub.createdAt,
-            status: sub.status || 'ACTIVE',
-            monthlyEventQuota: sub.monthly_event_quota || 10000,
-            eventsUsedThisMonth: sub.events_used_this_month || 0,
-            activeDevicesCount: sub.active_devices_count || 0,
-            activeMessageTypesCount: sub.active_message_types_count || 0,
-            overageEventsCount: sub.overage_events_count || 0,
-            overageAmount: sub.overage_amount || 0
-          })));
-        } else {
-          this.subscriptions.set([]);
-        }
-      } catch (e) {
-        this.subscriptions.set([]);
-      }
-
-      // 10. Diagnostics
-      try {
-        const diagRes = await firstValueFrom(this.http.get<any>(`${this.baseUrl}/diagnostics`, { headers }));
-        if (diagRes && diagRes.success && Array.isArray(diagRes.data)) {
-          this.diagnostics.set(diagRes.data.map((d: any) => ({
-            id: d._id || d.id,
-            signatureHash: d.signature_hash,
-            sender: d.sender,
-            candidateSourceCode: d.candidate_source_code,
-            messageLength: d.message_length,
-            samplePatternSignature: d.sample_pattern_signature,
-            occurrencesCount: d.occurrences_count || 1,
-            affectedDevicesCount: d.affected_devices_count || 1,
-            affectedUsersCount: d.affected_users_count || 1,
-            firstSeenAt: d.first_seen_at || d.createdAt,
-            lastSeenAt: d.last_seen_at || d.createdAt,
-            status: d.status || 'PENDING_REVIEW'
-          })));
-        } else {
-          this.diagnostics.set([]);
-        }
-      } catch (e) {
-        this.diagnostics.set([]);
-      }
-
     } catch (e) {
-      console.error('Relay live data fetch error:', e);
+      console.error('Fetch message types error:', e);
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
+  async fetchDevices() {
+    const token = this.authService.authToken();
+    if (!token) return;
+    try {
+      this.isLoading.set(true);
+      const headers = this.getAuthHeaders();
+      const res = await firstValueFrom(this.http.get<any>(`${this.baseUrl}/devices`, { headers }));
+      if (res && res.success && Array.isArray(res.data)) {
+        this.devices.set(res.data.map((d: any) => ({
+          id: d._id || d.id,
+          userId: d.user_id?._id || d.user_id || '',
+          userName: d.user_id?.name || 'User',
+          userEmail: d.user_id?.email || '',
+          deviceLabel: d.device_label || 'Android Device',
+          installationId: d.installation_id || '',
+          model: d.model || 'Device',
+          manufacturer: d.manufacturer || 'Android',
+          androidVersion: d.android_version || '15',
+          appVersion: d.app_version || '1.0.0',
+          batteryPercent: d.battery_percent ?? 100,
+          networkType: d.network_type || 'WIFI',
+          status: d.connection_status === 'ONLINE' ? 'ACTIVE' : (d.connection_status || 'ACTIVE'),
+          lastSeenAt: d.last_seen_at ? new Date(d.last_seen_at).toLocaleTimeString() : 'Recently',
+          configVersion: d.config_version || 1,
+          configChecksum: d.config_checksum || 'sha256:live',
+          smsPermission: d.sms_permission ?? true,
+          activeMessageTypesCount: d.active_message_types_count || 0,
+          todayRelayedCount: d.today_relayed_count || 0,
+          createdAt: d.createdAt
+        })));
+      }
+    } catch (e) {
+      console.error('Fetch devices error:', e);
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
+  async fetchEvents() {
+    const token = this.authService.authToken();
+    if (!token) return;
+    try {
+      this.isLoading.set(true);
+      const headers = this.getAuthHeaders();
+      const res = await firstValueFrom(this.http.get<any>(`${this.baseUrl}/events`, { headers }));
+      if (res && res.success && Array.isArray(res.data)) {
+        this.events.set(res.data.map((evt: any) => ({
+          id: evt._id || evt.id,
+          clientEventId: evt.client_event_id || evt._id,
+          userId: evt.user_id?._id || evt.user_id || '',
+          userName: evt.user_id?.name || 'User',
+          userEmail: evt.user_id?.email || '',
+          deviceId: evt.device_id?._id || evt.device_id || '',
+          deviceName: evt.device_id?.device_label || 'Android Device',
+          sourceCode: evt.source_code || '',
+          sourceName: evt.source_name || '',
+          sender: evt.sender || '',
+          messageTypeId: evt.message_type_id?._id || evt.message_type_id || '',
+          messageTypeName: evt.message_type_id?.name || evt.message_type_name || 'SMS Event',
+          eventType: evt.message_type_id?.event_type || 'portal.otp.received',
+          category: evt.category || 'OTP',
+          templateId: evt.template_id || '',
+          templateVersion: evt.template_version || 1,
+          receivedAt: evt.received_at || evt.createdAt,
+          processedAt: evt.createdAt,
+          messageHash: evt.message_hash || '',
+          variables: evt.variables || {},
+          maskedVariables: evt.masked_variables || evt.variables || {},
+          webhookDeliveryStatus: evt.webhook_status || 'DELIVERED',
+          webhookAttempts: evt.webhook_attempts || 1,
+          webhookResponseCode: evt.http_response_code || 200,
+          webhookDeliveryId: 'whd_' + (evt._id || ''),
+          webhookDeliveredAt: evt.webhook_delivered_at || evt.createdAt,
+          isDuplicate: evt.is_duplicate || false
+        })));
+      }
+    } catch (e) {
+      console.error('Fetch events error:', e);
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
+  async fetchPackages() {
+    const token = this.authService.authToken();
+    if (!token) return;
+    try {
+      const headers = this.getAuthHeaders();
+      const res = await firstValueFrom(this.http.get<any>(`${this.baseUrl}/packages`, { headers }));
+      if (res && res.success && Array.isArray(res.data)) {
+        this.packages.set(res.data.map((p: any) => ({
+          id: p._id || p.id,
+          planCode: p.plan_code,
+          name: p.name,
+          priceMonthly: p.price_monthly,
+          priceAnnual: p.price_annual,
+          maxDevices: p.max_devices,
+          maxActiveMessageTypes: p.max_active_message_types,
+          includedEvents: p.included_events,
+          maxWebhooks: p.max_webhooks,
+          maxApiKeys: p.max_api_keys,
+          retentionDays: p.retention_days,
+          overageEnabled: p.overage_enabled ?? true,
+          overagePricePerEvent: p.overage_price_per_event || 0.05,
+          publicApiAccess: p.public_api_access ?? true,
+          isActive: p.is_active ?? true,
+          activeSubscribersCount: p.active_subscribers_count || 0
+        })));
+      }
+    } catch (e) {
+      console.error('Fetch packages error:', e);
+    }
+  }
+
+  async fetchSubscriptions() {
+    const token = this.authService.authToken();
+    if (!token) return;
+    try {
+      const headers = this.getAuthHeaders();
+      const res = await firstValueFrom(this.http.get<any>(`${this.baseUrl}/subscriptions`, { headers }));
+      if (res && res.success && Array.isArray(res.data)) {
+        this.subscriptions.set(res.data.map((sub: any) => ({
+          id: sub._id || sub.id,
+          userId: sub.user_id?._id || sub.user_id || '',
+          userName: sub.user_id?.name || 'Subscriber',
+          userEmail: sub.user_id?.email || '',
+          companyName: sub.user_id?.company || 'Company',
+          planId: sub.plan_id?._id || sub.plan_id || '',
+          planCode: sub.plan_code || 'relay_plan',
+          planName: sub.plan_name || 'Relay Plan',
+          billingCycle: sub.billing_cycle || 'MONTHLY',
+          startDate: sub.start_date || sub.createdAt,
+          renewalDate: sub.renewal_date || sub.createdAt,
+          status: sub.status || 'ACTIVE',
+          monthlyEventQuota: sub.monthly_event_quota || 10000,
+          eventsUsedThisMonth: sub.events_used_this_month || 0,
+          activeDevicesCount: sub.active_devices_count || 0,
+          activeMessageTypesCount: sub.active_message_types_count || 0,
+          overageEventsCount: sub.overage_events_count || 0,
+          overageAmount: sub.overage_amount || 0
+        })));
+      }
+    } catch (e) {
+      console.error('Fetch subscriptions error:', e);
+    }
+  }
+
+  async fetchDiagnostics() {
+    const token = this.authService.authToken();
+    if (!token) return;
+    try {
+      this.isLoading.set(true);
+      const headers = this.getAuthHeaders();
+      const res = await firstValueFrom(this.http.get<any>(`${this.baseUrl}/diagnostics`, { headers }));
+      if (res && res.success && Array.isArray(res.data)) {
+        this.diagnostics.set(res.data.map((d: any) => ({
+          id: d._id || d.id,
+          signatureHash: d.signature_hash,
+          sender: d.sender,
+          candidateSourceCode: d.candidate_source_code,
+          messageLength: d.message_length,
+          samplePatternSignature: d.sample_pattern_signature,
+          occurrencesCount: d.occurrences_count || 1,
+          affectedDevicesCount: d.affected_devices_count || 1,
+          affectedUsersCount: d.affected_users_count || 1,
+          firstSeenAt: d.first_seen_at || d.createdAt,
+          lastSeenAt: d.last_seen_at || d.createdAt,
+          status: d.status || 'PENDING_REVIEW'
+        })));
+      }
+    } catch (e) {
+      console.error('Fetch diagnostics error:', e);
     } finally {
       this.isLoading.set(false);
     }
@@ -605,7 +661,7 @@ export class RelayService {
       }, { headers }));
 
       if (res && res.success && res.data) {
-        await this.fetchLiveRelayData();
+        await this.fetchMessageTypes();
         this.toastService.showSuccess('Template Published', res.message || 'Template saved and pushed to live nodes.');
         const found = this.messageTypes().find(m => m.id === res.data._id || m.name === params.messageTypeName);
         return {

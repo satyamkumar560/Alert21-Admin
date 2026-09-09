@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '../shared/icon.component';
@@ -86,7 +86,8 @@ import { RelaySource, RelaySender, RelaySourceType, RelaySenderMatchMode } from 
                 <th class="py-3 px-4">Source Name & Code</th>
                 <th class="py-3 px-4">Type</th>
                 <th class="py-3 px-4">Country</th>
-                <th class="py-3 px-4">Mapped Senders</th>
+                <th class="py-3 px-4">Delivery Channels</th>
+                <th class="py-3 px-4">Mapped Sender</th>
                 <th class="py-3 px-4">Status</th>
                 <th class="py-3 px-4">Notes</th>
                 <th class="py-3 px-4 text-right">Actions</th>
@@ -113,6 +114,18 @@ import { RelaySource, RelaySender, RelaySourceType, RelaySenderMatchMode } from 
                 </td>
                 <td class="py-3.5 px-4">
                   <span class="font-bold text-slate-700 uppercase font-mono text-[11px]">{{ src.country }}</span>
+                </td>
+                <td class="py-3.5 px-4">
+                  <div class="flex items-center gap-1.5 flex-wrap">
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold font-mono"
+                      [ngClass]="src.dashboardAllowed !== false ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'bg-slate-100 text-slate-400'">
+                      Dash: {{ src.dashboardAllowed !== false ? 'YES' : 'NO' }}
+                    </span>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold font-mono"
+                      [ngClass]="src.webhookAllowed !== false ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-400'">
+                      Webhook: {{ src.webhookAllowed !== false ? 'YES' : 'NO' }}
+                    </span>
+                  </div>
                 </td>
                 <td class="py-3.5 px-4">
                   <div class="flex items-center gap-1.5 flex-wrap">
@@ -161,9 +174,10 @@ import { RelaySource, RelaySender, RelaySourceType, RelaySenderMatchMode } from 
           <table class="w-full text-left text-xs">
             <thead>
               <tr class="border-b border-slate-100 bg-slate-50/50 text-slate-400 font-bold uppercase tracking-wider text-[10px]">
-                <th class="py-3 px-4">Sender ID Observed</th>
-                <th class="py-3 px-4">Mapped Business Source</th>
-                <th class="py-3 px-4">Alias Group</th>
+                <th class="py-3 px-4">Raw Sender Observed</th>
+                <th class="py-3 px-4">Normalised Sender</th>
+                <th class="py-3 px-4">Logical Source</th>
+                <th class="py-3 px-4">Priority</th>
                 <th class="py-3 px-4">Match Mode</th>
                 <th class="py-3 px-4">Status</th>
                 <th class="py-3 px-4 text-right">Actions</th>
@@ -177,12 +191,15 @@ import { RelaySource, RelaySender, RelaySourceType, RelaySenderMatchMode } from 
                     <span>{{ snd.senderValue }}</span>
                   </div>
                 </td>
+                <td class="py-3.5 px-4 font-mono font-bold text-indigo-700">
+                  {{ snd.normalisedSender || snd.senderValue }}
+                </td>
                 <td class="py-3.5 px-4">
                   <span class="font-bold text-slate-800">{{ snd.sourceName || snd.sourceCode }}</span>
                   <span class="ml-1 px-1.5 py-0.5 rounded bg-slate-100 text-indigo-700 font-mono text-[10px] font-bold">[{{ snd.sourceCode }}]</span>
                 </td>
-                <td class="py-3.5 px-4 font-mono text-slate-500">
-                  {{ snd.aliasGroup || 'DEFAULT' }}
+                <td class="py-3.5 px-4 font-mono text-slate-700 font-bold">
+                  {{ snd.priority || 100 }}
                 </td>
                 <td class="py-3.5 px-4">
                   <span class="px-2 py-0.5 rounded font-mono text-[10px] font-bold"
@@ -244,6 +261,18 @@ import { RelaySource, RelaySender, RelaySourceType, RelaySenderMatchMode } from 
               </div>
             </div>
 
+            <!-- Delivery Permissions -->
+            <div class="grid grid-cols-2 gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" [(ngModel)]="sourceForm.dashboardAllowed" class="rounded text-indigo-600 focus:ring-0" />
+                <span class="font-bold text-slate-700">Dashboard Allowed</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" [(ngModel)]="sourceForm.webhookAllowed" class="rounded text-indigo-600 focus:ring-0" />
+                <span class="font-bold text-slate-700">Webhook Allowed</span>
+              </label>
+            </div>
+
             <div>
               <label class="block font-bold text-slate-700 mb-1">Internal Notes & Description</label>
               <textarea [(ngModel)]="sourceForm.notes" rows="2" placeholder="e.g. Relays login OTP and bank credit notifications..." class="w-full px-3 py-2 border rounded-xl font-medium focus:outline-none focus:border-indigo-500"></textarea>
@@ -277,7 +306,18 @@ import { RelaySource, RelaySender, RelaySourceType, RelaySenderMatchMode } from 
 
             <div>
               <label class="block font-bold text-slate-700 mb-1">Exact Sender ID Observed on Android *</label>
-              <input type="text" [(ngModel)]="senderForm.senderValue" placeholder="e.g. JD-GSTNIN, VM-HDFCBK, GODADY" class="w-full px-3 py-2 border rounded-xl font-mono uppercase focus:outline-none focus:border-indigo-500" />
+              <input type="text" [(ngModel)]="senderForm.senderValue" (ngModelChange)="onRawSenderChanged()" placeholder="e.g. JD-GSTNIN, VM-HDFCBK, GODADY" class="w-full px-3 py-2 border rounded-xl font-mono uppercase focus:outline-none focus:border-indigo-500" />
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">Normalised Sender</label>
+                <input type="text" [(ngModel)]="senderForm.normalisedSender" placeholder="e.g. GSTNIN, HDFCBK" class="w-full px-3 py-2 border rounded-xl font-mono uppercase focus:outline-none focus:border-indigo-500" />
+              </div>
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">Priority (e.g. 100)</label>
+                <input type="number" [(ngModel)]="senderForm.priority" class="w-full px-3 py-2 border rounded-xl font-mono focus:outline-none focus:border-indigo-500" />
+              </div>
             </div>
 
             <div class="grid grid-cols-2 gap-3">
@@ -308,8 +348,13 @@ import { RelaySource, RelaySender, RelaySourceType, RelaySenderMatchMode } from 
     </div>
   `
 })
-export class RelaySourcesComponent {
+export class RelaySourcesComponent implements OnInit {
   relayService = inject(RelayService);
+
+  ngOnInit() {
+    this.relayService.fetchSources();
+    this.relayService.fetchSenders();
+  }
 
   activeTab: 'sources' | 'senders' = 'sources';
   searchQuery = '';
@@ -322,6 +367,8 @@ export class RelaySourcesComponent {
     sourceName: '',
     sourceType: 'GOVT_PORTAL' as RelaySourceType,
     country: 'IN',
+    dashboardAllowed: true,
+    webhookAllowed: true,
     notes: '',
     status: 'ACTIVE' as 'ACTIVE' | 'INACTIVE'
   };
@@ -332,6 +379,9 @@ export class RelaySourcesComponent {
     sourceCode: '',
     sourceName: '',
     senderValue: '',
+    normalisedSender: '',
+    priority: 100,
+    exactMatch: true,
     aliasGroup: '',
     matchMode: 'EXACT' as RelaySenderMatchMode,
     status: 'ACTIVE' as 'ACTIVE' | 'INACTIVE'
@@ -352,7 +402,7 @@ export class RelaySourcesComponent {
     return this.relayService.senders().filter(snd => {
       if (this.searchQuery) {
         const q = this.searchQuery.toLowerCase();
-        return snd.senderValue.toLowerCase().includes(q) || snd.sourceCode.toLowerCase().includes(q) || (snd.sourceName || '').toLowerCase().includes(q);
+        return snd.senderValue.toLowerCase().includes(q) || (snd.normalisedSender || '').toLowerCase().includes(q) || snd.sourceCode.toLowerCase().includes(q) || (snd.sourceName || '').toLowerCase().includes(q);
       }
       return true;
     });
@@ -380,7 +430,7 @@ export class RelaySourcesComponent {
 
   openAddSourceModal() {
     this.editingSourceId = null;
-    this.sourceForm = { sourceCode: '', sourceName: '', sourceType: 'GOVT_PORTAL', country: 'IN', notes: '', status: 'ACTIVE' };
+    this.sourceForm = { sourceCode: '', sourceName: '', sourceType: 'GOVT_PORTAL', country: 'IN', dashboardAllowed: true, webhookAllowed: true, notes: '', status: 'ACTIVE' };
     this.showSourceModal = true;
   }
 
@@ -391,6 +441,8 @@ export class RelaySourcesComponent {
       sourceName: src.sourceName,
       sourceType: src.sourceType,
       country: src.country,
+      dashboardAllowed: src.dashboardAllowed !== false,
+      webhookAllowed: src.webhookAllowed !== false,
       notes: src.notes || '',
       status: src.status
     };
@@ -414,11 +466,20 @@ export class RelaySourcesComponent {
       sourceCode: src ? src.sourceCode : '',
       sourceName: src ? src.sourceName : '',
       senderValue: '',
+      normalisedSender: '',
+      priority: 100,
+      exactMatch: true,
       aliasGroup: '',
       matchMode: 'EXACT',
       status: 'ACTIVE'
     };
     this.showSenderModal = true;
+  }
+
+  onRawSenderChanged() {
+    const raw = this.senderForm.senderValue || '';
+    // Auto-strip 2-letter operator prefix (e.g. JD-GSTNIN -> GSTNIN)
+    this.senderForm.normalisedSender = raw.replace(/^[A-Za-z]{2}-/, '');
   }
 
   onSourceSelectedForSender() {

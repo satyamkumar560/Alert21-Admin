@@ -120,7 +120,61 @@ interface TokenItem {
               </div>
             </div>
 
-            <!-- 4. Raw Message Storage Policy -->
+            <!-- 4. Matching Rules & Keyword Guardrails (Page 5 & 21) -->
+            <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+              <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                Matching Rules & Guardrails
+              </span>
+
+              <!-- Direction & Mode if Transaction or Alert -->
+              <div class="grid grid-cols-2 gap-2" *ngIf="selectedCategory === 'TRANSACTION'">
+                <div>
+                  <label class="block font-bold text-slate-700 text-[10px] mb-1">Direction *</label>
+                  <select [(ngModel)]="direction" class="w-full px-2 py-1.5 text-xs border border-slate-200 rounded-lg font-semibold bg-white">
+                    <option value="credit">CREDIT</option>
+                    <option value="debit">DEBIT</option>
+                    <option value="n/a">N/A</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block font-bold text-slate-700 text-[10px] mb-1">Payment Mode</label>
+                  <select [(ngModel)]="paymentMode" class="w-full px-2 py-1.5 text-xs border border-slate-200 rounded-lg font-semibold bg-white">
+                    <option value="UPI">UPI</option>
+                    <option value="IMPS">IMPS</option>
+                    <option value="NEFT">NEFT</option>
+                    <option value="RTGS">RTGS</option>
+                    <option value="CARD">CARD</option>
+                    <option value="OTHER">OTHER</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Required & Forbidden Keywords -->
+              <div class="space-y-2">
+                <div>
+                  <label class="block font-bold text-slate-700 text-[10px] mb-0.5">Required Keywords (Must all exist)</label>
+                  <input type="text" [(ngModel)]="requiredKeywordsStr" placeholder="e.g. Credited, A/c, Ref, Bal" class="w-full px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg font-medium bg-white" />
+                </div>
+                <div>
+                  <label class="block font-bold text-slate-700 text-[10px] mb-0.5">Forbidden Keywords (Reject if present)</label>
+                  <input type="text" [(ngModel)]="forbiddenKeywordsStr" placeholder="e.g. debited, deducted" class="w-full px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg font-medium bg-white" />
+                </div>
+              </div>
+
+              <!-- Normalization Toggles -->
+              <div class="flex items-center gap-3 pt-1 text-[11px] flex-wrap">
+                <label class="flex items-center gap-1.5 cursor-pointer">
+                  <input type="checkbox" [(ngModel)]="whitespaceNormalisation" class="rounded text-indigo-600 focus:ring-0" />
+                  <span class="text-slate-600 font-semibold">Whitespace Norm</span>
+                </label>
+                <label class="flex items-center gap-1.5 cursor-pointer">
+                  <input type="checkbox" [(ngModel)]="caseInsensitive" class="rounded text-indigo-600 focus:ring-0" />
+                  <span class="text-slate-600 font-semibold">Case Insensitive</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- 5. Raw Message Storage Policy -->
             <div>
               <label class="block font-bold text-slate-700 text-xs mb-1">Raw SMS Policy</label>
               <select [(ngModel)]="rawMessagePolicy" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl font-semibold text-slate-800 focus:outline-none focus:border-indigo-500">
@@ -246,7 +300,7 @@ interface TokenItem {
             <div class="flex items-center justify-between border-b pb-3">
               <h3 class="font-extrabold text-slate-900 text-sm flex items-center gap-2">
                 <span class="w-6 h-6 rounded-full bg-indigo-600 text-white text-xs font-bold flex items-center justify-center">3</span>
-                <span>Live Test Parser Sandbox</span>
+                <span>Live Test Parser Sandbox (Page 16 & 21)</span>
               </h3>
               <button (click)="runTestParser()" class="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all">
                 <app-icon name="play" [size]="12"></app-icon>
@@ -260,11 +314,12 @@ interface TokenItem {
                 <input type="text" [(ngModel)]="testSenderInput" placeholder="e.g. JD-GSTNIN" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl font-mono uppercase" />
               </div>
               <div>
-                <label class="block font-bold text-slate-700 text-xs mb-1">Test Mode</label>
-                <div class="flex items-center gap-2 pt-1">
+                <label class="block font-bold text-slate-700 text-xs mb-1">Fast Test Injection</label>
+                <div class="flex items-center gap-1.5 pt-1 flex-wrap">
                   <button (click)="loadTestSample('positive')" class="px-2 py-1 rounded bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200">Positive Sample</button>
+                  <button (click)="loadTestSample('forbidden')" class="px-2 py-1 rounded bg-rose-50 text-rose-700 text-[10px] font-bold border border-rose-200">Forbidden Keyword</button>
                   <button (click)="loadTestSample('spaces')" class="px-2 py-1 rounded bg-blue-50 text-blue-700 text-[10px] font-bold border border-blue-200">Whitespace Alt</button>
-                  <button (click)="loadTestSample('wrong_sender')" class="px-2 py-1 rounded bg-rose-50 text-rose-700 text-[10px] font-bold border border-rose-200">Wrong Sender</button>
+                  <button (click)="loadTestSample('wrong_sender')" class="px-2 py-1 rounded bg-slate-100 text-slate-700 text-[10px] font-bold border border-slate-200">Wrong Sender</button>
                 </div>
               </div>
             </div>
@@ -284,7 +339,35 @@ interface TokenItem {
                     {{ testResult.matched ? 'MATCH SUCCESSFUL' : 'NO MATCH / REJECTED' }}
                   </strong>
                 </div>
-                <span class="text-[10px] font-mono text-slate-500">{{ testResult.timeTakenMs }}ms execution</span>
+                <span class="text-[10px] font-mono text-slate-500">{{ testResult.timeTakenMs }}ms execution (<10ms spec)</span>
+              </div>
+
+              <!-- Step-by-step Rule Audit Breakdown -->
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+                <div class="p-2 rounded-lg bg-white border border-slate-200 text-center">
+                  <span class="text-[9px] font-bold uppercase text-slate-400 block">1. Sender ID</span>
+                  <strong class="text-[10px] font-bold" [ngClass]="testResult.checks.sender ? 'text-emerald-600' : 'text-rose-600'">
+                    {{ testResult.checks.sender ? '✓ ALLOWED' : '✗ REJECTED' }}
+                  </strong>
+                </div>
+                <div class="p-2 rounded-lg bg-white border border-slate-200 text-center">
+                  <span class="text-[9px] font-bold uppercase text-slate-400 block">2. Forbidden Words</span>
+                  <strong class="text-[10px] font-bold" [ngClass]="testResult.checks.forbidden ? 'text-emerald-600' : 'text-rose-600'">
+                    {{ testResult.checks.forbidden ? '✓ PASS' : '✗ DETECTED' }}
+                  </strong>
+                </div>
+                <div class="p-2 rounded-lg bg-white border border-slate-200 text-center">
+                  <span class="text-[9px] font-bold uppercase text-slate-400 block">3. Required Words</span>
+                  <strong class="text-[10px] font-bold" [ngClass]="testResult.checks.required ? 'text-emerald-600' : 'text-rose-600'">
+                    {{ testResult.checks.required ? '✓ ALL FOUND' : '✗ MISSING' }}
+                  </strong>
+                </div>
+                <div class="p-2 rounded-lg bg-white border border-slate-200 text-center">
+                  <span class="text-[9px] font-bold uppercase text-slate-400 block">4. Regex Tokens</span>
+                  <strong class="text-[10px] font-bold" [ngClass]="testResult.checks.regex ? 'text-emerald-600' : 'text-rose-600'">
+                    {{ testResult.checks.regex ? '✓ PARSED' : '✗ NO MATCH' }}
+                  </strong>
+                </div>
               </div>
 
               <p class="text-xs text-slate-600 mb-3">{{ testResult.message }}</p>
@@ -327,6 +410,14 @@ export class RelayBuilderComponent implements OnInit {
   selectedSenderIds: string[] = [];
   rawMessagePolicy: 'DISABLED' | 'MASKED' | 'FULL' = 'DISABLED';
 
+  // Matching Rules (Page 5)
+  direction: 'credit' | 'debit' | 'n/a' = 'n/a';
+  paymentMode: 'UPI' | 'IMPS' | 'NEFT' | 'RTGS' | 'CARD' | 'OTHER' | 'N/A' = 'N/A';
+  requiredKeywordsStr = '';
+  forbiddenKeywordsStr = '';
+  whitespaceNormalisation = true;
+  caseInsensitive = true;
+
   sampleSmsText = '';
   tokens: TokenItem[] = [];
   variableMappings: RelayTemplateVariableMapping[] = [];
@@ -336,18 +427,47 @@ export class RelayBuilderComponent implements OnInit {
 
   testSenderInput = '';
   testSmsInput = '';
-  testResult: { matched: boolean; message: string; extracted: Record<string, any>; timeTakenMs: number } | null = null;
+  testResult: { 
+    matched: boolean; 
+    message: string; 
+    checks: { sender: boolean; forbidden: boolean; required: boolean; regex: boolean };
+    extracted: Record<string, any>; 
+    timeTakenMs: number 
+  } | null = null;
 
   availableSenders: RelaySender[] = [];
 
   ngOnInit() {
-    this.loadPreset('GST');
+    this.relayService.fetchSources();
+    this.relayService.fetchSenders();
+    this.relayService.fetchVariables();
+
+    const draft = this.relayService.builderDraft();
+    if (draft) {
+      this.selectedSourceId = draft.sourceId || '';
+      if (!this.selectedSourceId && draft.sourceCode) {
+        const foundSrc = this.relayService.sources().find(s => s.sourceCode.toUpperCase() === (draft.sourceCode || '').toUpperCase());
+        if (foundSrc) this.selectedSourceId = foundSrc.id;
+      }
+      this.onSourceChanged();
+      if (draft.senderValue) {
+        this.selectedSenderIds = [draft.senderValue];
+      }
+      this.sampleSmsText = draft.sampleSmsText || '';
+      this.messageTypeName = draft.messageTypeName || 'SMS Template Variant';
+      this.selectedCategory = draft.category || 'OTP';
+      this.onCategoryChanged();
+      this.tokenizeSms();
+      this.relayService.builderDraft.set(null);
+    } else {
+      this.loadPreset('GST');
+    }
   }
 
   onSourceChanged() {
     const src = this.relayService.sources().find(s => s.id === this.selectedSourceId);
     if (src) {
-      this.availableSenders = this.relayService.senders().filter(snd => snd.sourceId === src.id);
+      this.availableSenders = this.relayService.senders().filter(snd => snd.sourceId === src.id || (snd.sourceCode && snd.sourceCode === src.sourceCode));
       if (this.availableSenders.length > 0 && this.selectedSenderIds.length === 0) {
         this.selectedSenderIds = [this.availableSenders[0].senderValue];
       }
@@ -357,10 +477,16 @@ export class RelayBuilderComponent implements OnInit {
   onCategoryChanged() {
     if (this.selectedCategory === 'OTP') {
       this.eventTypeKey = `portal.${this.getSelectedSourceCode().toLowerCase()}.otp.received`;
+      this.direction = 'n/a';
+      this.paymentMode = 'N/A';
     } else if (this.selectedCategory === 'TRANSACTION') {
-      this.eventTypeKey = 'bank.credit.received';
+      this.eventTypeKey = this.direction === 'debit' ? 'bank.debit.received' : 'bank.credit.received';
+      this.direction = this.direction === 'n/a' ? 'credit' : this.direction;
+      this.paymentMode = this.paymentMode === 'N/A' ? 'UPI' : this.paymentMode;
     } else if (this.selectedCategory === 'LOGIN_SECURITY') {
       this.eventTypeKey = `portal.${this.getSelectedSourceCode().toLowerCase()}.login_otp.received`;
+      this.direction = 'n/a';
+      this.paymentMode = 'N/A';
     }
   }
 
@@ -550,6 +676,10 @@ export class RelayBuilderComponent implements OnInit {
       this.messageTypeName = 'GST Portal - Login OTP';
       this.selectedCategory = 'OTP';
       this.eventTypeKey = 'portal.gst.otp.received';
+      this.direction = 'n/a';
+      this.paymentMode = 'N/A';
+      this.requiredKeywordsStr = 'OTP, GST Portal, login';
+      this.forbiddenKeywordsStr = 'failed, rejected';
       this.selectedSenderIds = ['JD-GSTNIN', 'VM-GSTNIN'];
       this.sampleSmsText = '123456 is your OTP for GST Portal login. Valid for 10 minutes. Do not share it.';
       this.onSourceChanged();
@@ -571,6 +701,10 @@ export class RelayBuilderComponent implements OnInit {
       this.messageTypeName = 'GoDaddy - Security / Login Code';
       this.selectedCategory = 'LOGIN_SECURITY';
       this.eventTypeKey = 'portal.godaddy.login_otp.received';
+      this.direction = 'n/a';
+      this.paymentMode = 'N/A';
+      this.requiredKeywordsStr = 'GoDaddy, verification code';
+      this.forbiddenKeywordsStr = 'cancelled';
       this.selectedSenderIds = ['GODADY', 'AX-GODADY'];
       this.sampleSmsText = 'GoDaddy verification code: 784921. Use this code to sign in.';
       this.onSourceChanged();
@@ -588,6 +722,10 @@ export class RelayBuilderComponent implements OnInit {
       this.messageTypeName = 'Zoho CRM - Login OTP';
       this.selectedCategory = 'OTP';
       this.eventTypeKey = 'crm.login_otp.received';
+      this.direction = 'n/a';
+      this.paymentMode = 'N/A';
+      this.requiredKeywordsStr = 'Zoho CRM, login OTP';
+      this.forbiddenKeywordsStr = 'expired';
       this.selectedSenderIds = ['ZOHOCM', 'VK-ZOHOCM'];
       this.sampleSmsText = 'Your Zoho CRM login OTP is 456123. It expires in 5 minutes.';
       this.onSourceChanged();
@@ -608,6 +746,10 @@ export class RelayBuilderComponent implements OnInit {
       this.messageTypeName = 'HDFC Bank - Credit Alert';
       this.selectedCategory = 'TRANSACTION';
       this.eventTypeKey = 'bank.credit.received';
+      this.direction = 'credit';
+      this.paymentMode = 'UPI';
+      this.requiredKeywordsStr = 'credited, A/c, UPI, Ref, Bal';
+      this.forbiddenKeywordsStr = 'debited, deducted, reversed';
       this.selectedSenderIds = ['HDFCBK', 'VM-HDFCBK'];
       this.sampleSmsText = 'INR 25,000.00 credited to A/c XX4582 via UPI. Ref 625091234567. Avl Bal INR 84,520.20';
       this.onSourceChanged();
@@ -632,6 +774,10 @@ export class RelayBuilderComponent implements OnInit {
       this.messageTypeName = 'Bank - Debit Alert';
       this.selectedCategory = 'TRANSACTION';
       this.eventTypeKey = 'bank.debit.received';
+      this.direction = 'debit';
+      this.paymentMode = 'UPI';
+      this.requiredKeywordsStr = 'debited, A/c, Ref';
+      this.forbiddenKeywordsStr = 'credited, received, refund';
       this.selectedSenderIds = ['HDFCBK', 'ICICIB'];
       this.sampleSmsText = 'INR 8,500.00 debited from A/c XX1198 at ABC STORES. UPI Ref 625098765432.';
       this.onSourceChanged();
@@ -655,9 +801,14 @@ export class RelayBuilderComponent implements OnInit {
     this.runTestParser();
   }
 
-  loadTestSample(mode: 'positive' | 'spaces' | 'wrong_sender') {
+  loadTestSample(mode: 'positive' | 'forbidden' | 'spaces' | 'wrong_sender') {
     if (mode === 'positive') {
       this.testSmsInput = this.sampleSmsText;
+      this.testSenderInput = this.selectedSenderIds[0] || 'JD-GSTNIN';
+    } else if (mode === 'forbidden') {
+      const fbList = this.forbiddenKeywordsStr.split(',').map(s => s.trim()).filter(Boolean);
+      const injectedWord = fbList[0] || 'debited';
+      this.testSmsInput = this.sampleSmsText + ` [Warning: ${injectedWord}]`;
       this.testSenderInput = this.selectedSenderIds[0] || 'JD-GSTNIN';
     } else if (mode === 'spaces') {
       this.testSmsInput = this.sampleSmsText.replace(/\s+/g, '   ');
@@ -671,25 +822,72 @@ export class RelayBuilderComponent implements OnInit {
   runTestParser() {
     const start = performance.now();
     const sender = (this.testSenderInput || '').trim().toUpperCase();
-    const text = (this.testSmsInput || '').trim();
+    let text = (this.testSmsInput || '').trim();
+
+    if (this.whitespaceNormalisation) {
+      text = text.replace(/\s+/g, ' ');
+    }
+
+    const checks = {
+      sender: false,
+      forbidden: false,
+      required: false,
+      regex: false
+    };
 
     // 1. Check sender ID match
-    const senderMatches = this.selectedSenderIds.some(s => s === '*' || s === sender || (s.endsWith('*') && sender.startsWith(s.replace('*', ''))));
+    const senderMatches = this.selectedSenderIds.some(s => s === '*' || s.toUpperCase() === sender || (s.endsWith('*') && sender.startsWith(s.replace('*', ''))));
+    checks.sender = senderMatches;
     if (!senderMatches) {
       this.testResult = {
         matched: false,
-        message: `NO MATCH: Sender "${sender}" is not in the allowed sender list for this message type (${this.selectedSenderIds.join(', ')}).`,
+        message: `REJECTED: Sender "${sender}" is not in the allowed sender list (${this.selectedSenderIds.join(', ')}).`,
+        checks,
         extracted: {},
-        timeTakenMs: Math.round(performance.now() - start)
+        timeTakenMs: Number((performance.now() - start).toFixed(1))
       };
       return;
     }
 
-    // 2. Try regex match
+    // 2. Check Forbidden Keywords
+    const forbidden = this.forbiddenKeywordsStr.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+    const lowerText = text.toLowerCase();
+    const matchedForbidden = forbidden.find(fb => lowerText.includes(fb));
+    if (matchedForbidden) {
+      checks.forbidden = false;
+      this.testResult = {
+        matched: false,
+        message: `REJECTED BY GUARDRAIL: Forbidden keyword "${matchedForbidden}" detected in SMS body. Prevented false positive.`,
+        checks,
+        extracted: {},
+        timeTakenMs: Number((performance.now() - start).toFixed(1))
+      };
+      return;
+    }
+    checks.forbidden = true;
+
+    // 3. Check Required Keywords
+    const required = this.requiredKeywordsStr.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+    const missingReq = required.find(req => !lowerText.includes(req));
+    if (missingReq) {
+      checks.required = false;
+      this.testResult = {
+        matched: false,
+        message: `REJECTED: Missing required keyword "${missingReq}". SMS must contain all required keywords.`,
+        checks,
+        extracted: {},
+        timeTakenMs: Number((performance.now() - start).toFixed(1))
+      };
+      return;
+    }
+    checks.required = true;
+
+    // 4. Try regex match
     try {
-      const reg = new RegExp(this.compiledRegex, 'i');
+      const reg = new RegExp(this.compiledRegex, this.caseInsensitive ? 'i' : '');
       const match = text.match(reg);
       if (match) {
+        checks.regex = true;
         const extracted: Record<string, any> = {};
         this.variableMappings.forEach((mapping, idx) => {
           extracted[mapping.variableKey] = match[idx + 1] || 'N/A';
@@ -698,23 +896,28 @@ export class RelayBuilderComponent implements OnInit {
         this.testResult = {
           matched: true,
           message: `MATCH SUCCESS: Extracted ${Object.keys(extracted).length} variables with valid schema types and sensitivity masks.`,
+          checks,
           extracted: extracted,
-          timeTakenMs: Math.round(performance.now() - start)
+          timeTakenMs: Number((performance.now() - start).toFixed(1))
         };
       } else {
+        checks.regex = false;
         this.testResult = {
           matched: false,
-          message: 'NO MATCH: Text body structure does not conform to the fixed tokens pattern.',
+          message: 'NO MATCH: Text body structure does not conform to the fixed tokens pattern regex.',
+          checks,
           extracted: {},
-          timeTakenMs: Math.round(performance.now() - start)
+          timeTakenMs: Number((performance.now() - start).toFixed(1))
         };
       }
     } catch (e: any) {
+      checks.regex = false;
       this.testResult = {
         matched: false,
         message: `Regex evaluation error: ${e.message}`,
+        checks,
         extracted: {},
-        timeTakenMs: Math.round(performance.now() - start)
+        timeTakenMs: Number((performance.now() - start).toFixed(1))
       };
     }
   }

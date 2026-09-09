@@ -1,4 +1,4 @@
-import { Component, inject, Output, EventEmitter } from '@angular/core';
+import { Component, inject, Output, EventEmitter, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IconComponent } from '../shared/icon.component';
 import { RelayService } from '../../services/relay.service';
@@ -95,11 +95,22 @@ import { NavTab } from '../layout/sidebar.component';
     </div>
   `
 })
-export class RelayDiagnosticsComponent {
+export class RelayDiagnosticsComponent implements OnInit {
   relayService = inject(RelayService);
   @Output() navigate = new EventEmitter<NavTab>();
 
+  ngOnInit() {
+    this.relayService.fetchDiagnostics();
+  }
+
   openBuilderFromDiagnostic(d: RelayUnmatchedDiagnostic) {
+    this.relayService.builderDraft.set({
+      sourceCode: d.candidateSourceCode,
+      senderValue: d.sender,
+      sampleSmsText: d.samplePatternSignature || '',
+      messageTypeName: `${d.candidateSourceCode || 'SMS'} Alert Variant`,
+      category: 'OTP'
+    });
     this.navigate.emit('relay-builder');
   }
 }

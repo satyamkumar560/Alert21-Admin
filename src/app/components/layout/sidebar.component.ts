@@ -833,15 +833,15 @@ export class SidebarComponent {
   @Input() isSidebarOpen = true;
   @Output() tabChange = new EventEmitter<NavTab>();
 
-  // Accordion open/collapse states for all modules
-  isCoreOpen = signal<boolean>(true);
-  isBillingOpen = signal<boolean>(true);
-  isMonitoringOpen = signal<boolean>(true);
-  isEmailOpen = signal<boolean>(true);
-  isWhatsappOpen = signal<boolean>(true);
-  isRelayOpen = signal<boolean>(true);
-  isDltOpen = signal<boolean>(true);
-  isGatewaysOpen = signal<boolean>(true);
+  // Accordion open/collapse states for all modules (closed by default upon login)
+  isCoreOpen = signal<boolean>(false);
+  isBillingOpen = signal<boolean>(false);
+  isMonitoringOpen = signal<boolean>(false);
+  isEmailOpen = signal<boolean>(false);
+  isWhatsappOpen = signal<boolean>(false);
+  isRelayOpen = signal<boolean>(false);
+  isDltOpen = signal<boolean>(false);
+  isGatewaysOpen = signal<boolean>(false);
 
   toggleSection(section: 'core' | 'billing' | 'monitoring' | 'email' | 'whatsapp' | 'relay' | 'dlt' | 'gateways') {
     switch (section) {
