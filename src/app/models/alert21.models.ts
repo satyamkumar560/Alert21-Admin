@@ -969,6 +969,20 @@ export interface RelayDevice {
   activeMessageTypesCount: number;
   todayRelayedCount: number;
   createdAt: string;
+
+  // Outbound SMS Telemetry & Controls
+  allowSmsSend?: boolean;
+  isDefaultSmsDevice?: boolean;
+  defaultSimSlot?: number;
+  sim1Carrier?: string;
+  sim1Available?: boolean;
+  sim2Carrier?: string;
+  sim2Available?: boolean;
+  smsPermissionState?: 'GRANTED' | 'DENIED' | 'NOT_REQUESTED';
+  isBlocked?: boolean;
+  todaySentCount?: number;
+  todayFailedCount?: number;
+  lastSmsSentAt?: string;
 }
 
 export interface RelayEvent {
@@ -1076,6 +1090,94 @@ export interface RelayDashboardStats {
   webhookFailureRatePercent: number;
   totalRelayRevenue: number;
   totalSubscribers: number;
+}
+
+// 17. Outbound SMS Interfaces
+export type OutboundSmsStatus =
+  | 'QUEUED'
+  | 'ASSIGNED'
+  | 'DEVICE_RECEIVED'
+  | 'SENDING'
+  | 'SENT'
+  | 'DELIVERED'
+  | 'FAILED'
+  | 'DEVICE_OFFLINE'
+  | 'NO_SIM'
+  | 'NO_NETWORK'
+  | 'PERMISSION_DENIED'
+  | 'INVALID_NUMBER'
+  | 'TIMEOUT'
+  | 'EXPIRED'
+  | 'CANCELLED';
+
+export interface RelayOutboundSmsLog {
+  id: string;
+  _id?: string;
+  sms_id: string;
+  user_id?: {
+    _id?: string;
+    name?: string;
+    email?: string;
+    company?: string;
+  };
+  device_id?: {
+    _id?: string;
+    device_label?: string;
+    model?: string;
+    android_version?: string;
+    connection_status?: string;
+  };
+  mobile: string;
+  message: string;
+  sim_slot: number;
+  source: 'API' | 'DASHBOARD' | 'SYSTEM';
+  status: OutboundSmsStatus;
+  character_count?: number;
+  sms_parts?: number;
+  client_reference_id?: string;
+  error_code?: string;
+  error_message?: string;
+  assigned_at?: string;
+  device_received_at?: string;
+  sent_at?: string;
+  delivered_at?: string;
+  expires_at?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RelayOutboundSettings {
+  key: string;
+  global_outbound_enabled: boolean;
+  api_sending_enabled: boolean;
+  dashboard_sending_enabled: boolean;
+  default_daily_limit: number;
+  default_monthly_limit: number;
+  max_devices_per_user: number;
+  max_sms_per_minute: number;
+  default_queue_expiry_minutes: number;
+  updated_by?: string;
+}
+
+export interface RelayUserLimit {
+  id?: string;
+  _id?: string;
+  user_id?: {
+    _id?: string;
+    name?: string;
+    email?: string;
+    company?: string;
+  };
+  outbound_enabled: boolean;
+  api_enabled: boolean;
+  dashboard_enabled: boolean;
+  daily_limit: number;
+  monthly_limit: number;
+  max_devices: number;
+  max_sms_per_minute: number;
+  today_sent_count: number;
+  month_sent_count: number;
+  last_reset_date?: string;
 }
 
 

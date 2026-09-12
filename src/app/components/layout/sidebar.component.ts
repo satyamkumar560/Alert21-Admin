@@ -40,6 +40,7 @@ export type NavTab =
   | 'relay-sources'
   | 'relay-variables'
   | 'relay-devices'
+  | 'relay-outbound'
   | 'relay-events'
   | 'relay-packages'
   | 'relay-diagnostics'
@@ -612,13 +613,24 @@ export type NavTab =
               </span>
             </button>
 
+            <!-- Outbound SMS Gateway Controls & Logs [NEW] -->
+            <button
+              type="button"
+              (click)="onSelectTab('relay-outbound')"
+              [ngClass]="getNavClass('relay-outbound')"
+              class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all">
+              <app-icon name="send" [size]="15"></app-icon>
+              <span>Outbound SMS & Logs</span>
+              <span class="ml-auto bg-emerald-500/20 text-emerald-400 text-[9px] font-extrabold px-1.5 py-0.5 rounded border border-emerald-500/30">GATEWAY</span>
+            </button>
+
             <!-- Relay Events & Webhooks -->
             <button
               type="button"
               (click)="onSelectTab('relay-events')"
               [ngClass]="getNavClass('relay-events')"
               class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all">
-              <app-icon name="send" [size]="15"></app-icon>
+              <app-icon name="database" [size]="15"></app-icon>
               <span>Relay Ingest & Webhooks</span>
             </button>
 

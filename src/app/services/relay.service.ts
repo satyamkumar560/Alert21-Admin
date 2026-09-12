@@ -14,7 +14,10 @@ import {
   RelaySubscription, 
   RelayUnmatchedDiagnostic, 
   RelayDashboardStats,
-  RelayDraftTemplate
+  RelayDraftTemplate,
+  RelayOutboundSettings,
+  RelayOutboundSmsLog,
+  RelayUserLimit
 } from '../models/alert21.models';
 import { AuthService } from './auth.service';
 import { ToastService } from './toast.service';
@@ -57,6 +60,14 @@ export class RelayService {
   diagnostics = signal<RelayUnmatchedDiagnostic[]>([]);
   stats = signal<RelayDashboardStats | null>(null);
   builderDraft = signal<RelayDraftTemplate | null>(null);
+
+  // Outbound SMS Signals
+  outboundSettings = signal<RelayOutboundSettings | null>(null);
+  outboundLogs = signal<RelayOutboundSmsLog[]>([]);
+  outboundSummary = signal<{ todaySent: number; todayDelivered: number; todayFailed: number; totalLogs: number } | null>(null);
+  outboundPagination = signal<{ total: number; page: number; limit: number; pages: number }>({ total: 0, page: 1, limit: 50, pages: 1 });
+  userLimits = signal<RelayUserLimit[]>([]);
+
   isLoading = signal<boolean>(false);
 
   private isFetching = false;
@@ -761,5 +772,124 @@ export class RelayService {
   updatePackage(id: string, updates: Partial<RelayPackagePlan>) {
     this.packages.update(list => list.map(p => p.id === id ? { ...p, ...updates } : p));
     this.toastService.showSuccess('Package Updated', 'Plan quota and pricing rules saved.');
+  }
+
+  // ==========================================
+  // 10. OUTBOUND SMS CONTROLS & LOGS API
+  // ==========================================
+  async fetchOutboundSettings() {
+    const token = this.authService.authToken();
+    if (!token) return;
+    try {
+      const headers = this.getAuthHeaders();
+      const res = await firstValueFrom(this.http.get<any>(`${this.baseUrl}/outbound-settings`, { headers }));
+      if (res && (res.success || res.data)) {
+        this.outboundSettings.set(res.data || res);
+      }
+    } catch (e) {
+      console.error('Fetch outbound settings error:', e);
+    }
+  }
+
+  async updateOutboundSettings(settings: Partial<RelayOutboundSettings>): Promise<boolean> {
+    const token = this.authService.authToken();
+    if (!token) return false;
+    try {
+      const headers = this.getAuthHeaders();
+      const res = await firstValueFrom(this.http.post<any>(`${this.baseUrl}/outbound-settings`, settings, { headers }));
+      if (res && (res.success || res.data)) {
+        this.outboundSettings.set(res.data || settings);
+        this.toastService.showSuccess('Settings Saved', 'Global Outbound SMS controls updated successfully.');
+        return true;
+      }
+    } catch (err: any) {
+      this.toastService.showError('Update Failed', err?.error?.message || 'Could not update outbound settings.');
+    }
+    return false;
+  }
+
+  async fetchOutboundLogs(params?: { search?: string; status?: string; source?: string; page?: number; limit?: number }) {
+    const token = this.authService.authToken();
+    if (!token) return;
+    try {
+      this.isLoading.set(true);
+      const headers = this.getAuthHeaders();
+      let queryParams: any = {};
+      if (params?.search) queryParams.search = params.search;
+      if (params?.status && params.status !== 'ALL') queryParams.status = params.status;
+      if (params?.source && params.source !== 'ALL') queryParams.source = params.source;
+      if (params?.page) queryParams.page = params.page;
+      if (params?.limit) queryParams.limit = params.limit;
+
+      const res = await firstValueFrom(this.http.get<any>(`${this.baseUrl}/outbound-logs`, { headers, params: queryParams }));
+      if (res && res.success && res.data) {
+        this.outboundLogs.set(res.data.logs || []);
+        if (res.data.summary) this.outboundSummary.set(res.data.summary);
+        if (res.data.pagination) this.outboundPagination.set(res.data.pagination);
+      }
+    } catch (err) {
+      console.error('Fetch outbound logs error:', err);
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
+  async toggleDeviceSend(deviceId: string) {
+    try {
+      const headers = this.getAuthHeaders();
+      const res = await firstValueFrom(this.http.post<any>(`${this.baseUrl}/devices/${deviceId}/toggle-send`, {}, { headers }));
+      if (res && res.success) {
+        this.devices.update(list => list.map(d => d.id === deviceId ? { ...d, allowSmsSend: res.data.allow_sms_send } : d));
+        this.toastService.showSuccess('Device Updated', res.message || 'SMS Send status toggled.');
+      }
+    } catch (err: any) {
+      this.toastService.showError('Error', err?.error?.message || 'Failed to toggle device sending.');
+    }
+  }
+
+  async toggleDeviceBlock(deviceId: string) {
+    try {
+      const headers = this.getAuthHeaders();
+      const res = await firstValueFrom(this.http.post<any>(`${this.baseUrl}/devices/${deviceId}/toggle-block`, {}, { headers }));
+      if (res && res.success) {
+        this.devices.update(list => list.map(d => d.id === deviceId ? { ...d, isBlocked: res.data.is_blocked, status: res.data.is_blocked ? 'OFFLINE' : d.status } : d));
+        this.toastService.showSuccess('Device Block State', res.message || 'Device blocked/unblocked.');
+      }
+    } catch (err: any) {
+      this.toastService.showError('Error', err?.error?.message || 'Failed to block/unblock device.');
+    }
+  }
+
+  async fetchUserLimits() {
+    const token = this.authService.authToken();
+    if (!token) return;
+    try {
+      const headers = this.getAuthHeaders();
+      const res = await firstValueFrom(this.http.get<any>(`${this.baseUrl}/user-limits`, { headers }));
+      if (res && res.success && Array.isArray(res.data)) {
+        this.userLimits.set(res.data);
+      }
+    } catch (e) {
+      console.error('Fetch user limits error:', e);
+    }
+  }
+
+  async updateUserLimit(userId: string, limits: Partial<RelayUserLimit>) {
+    try {
+      const headers = this.getAuthHeaders();
+      const res = await firstValueFrom(this.http.post<any>(`${this.baseUrl}/user-limits/${userId}`, limits, { headers }));
+      if (res && res.success) {
+        this.userLimits.update(list => {
+          const exists = list.some(l => (l.user_id?._id || l._id || l.id) === userId);
+          if (exists) {
+            return list.map(l => (l.user_id?._id || l._id || l.id) === userId ? { ...l, ...res.data } : l);
+          }
+          return [res.data, ...list];
+        });
+        this.toastService.showSuccess('User Limits Updated', 'User outbound SMS quota and rate limits saved.');
+      }
+    } catch (err: any) {
+      this.toastService.showError('Error', err?.error?.message || 'Failed to update user limits.');
+    }
   }
 }

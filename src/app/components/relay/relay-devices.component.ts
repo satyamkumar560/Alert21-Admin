@@ -79,11 +79,11 @@ import { RelayDevice } from '../../models/alert21.models';
               <tr class="border-b border-slate-100 bg-slate-50/50 text-slate-400 font-bold uppercase tracking-wider text-[10px]">
                 <th class="py-3 px-4">Device Label & Hardware</th>
                 <th class="py-3 px-4">User Account</th>
-                <th class="py-3 px-4">OS & App Version</th>
+                <th class="py-3 px-4">SIM 1 / SIM 2 Slots</th>
                 <th class="py-3 px-4">Battery & Network</th>
-                <th class="py-3 px-4">Config Version</th>
+                <th class="py-3 px-4">Outbound SMS</th>
                 <th class="py-3 px-4">Status & Heartbeat</th>
-                <th class="py-3 px-4">Today Relayed</th>
+                <th class="py-3 px-4">Today Relayed / Sent</th>
                 <th class="py-3 px-4 text-right">Actions</th>
               </tr>
             </thead>
@@ -96,7 +96,7 @@ import { RelayDevice } from '../../models/alert21.models';
                     </div>
                     <div>
                       <span class="font-extrabold text-slate-900 text-sm">{{ dev.deviceLabel }}</span>
-                      <span class="block font-mono text-slate-400 text-[10px]">{{ dev.model }} ({{ dev.manufacturer }})</span>
+                      <span class="block font-mono text-slate-400 text-[10px]">{{ dev.model }} ({{ dev.manufacturer }}) &bull; Android {{ dev.androidVersion }}</span>
                     </div>
                   </div>
                 </td>
@@ -104,9 +104,20 @@ import { RelayDevice } from '../../models/alert21.models';
                   <span class="font-bold text-slate-800">{{ dev.userName }}</span>
                   <span class="block text-slate-400 text-[10px]">{{ dev.userEmail }}</span>
                 </td>
-                <td class="py-3.5 px-4 font-mono">
-                  <span class="font-bold text-slate-700">Android {{ dev.androidVersion }}</span>
-                  <span class="block text-[10px] text-slate-400">App v{{ dev.appVersion }}</span>
+                <!-- SIM 1 / SIM 2 Slots -->
+                <td class="py-3.5 px-4">
+                  <div class="space-y-1">
+                    <div class="flex items-center gap-1.5 text-[10px]">
+                      <span class="px-1.5 py-0.5 rounded font-bold" [ngClass]="dev.sim1Available !== false ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'">
+                        SIM 1
+                      </span>
+                      <span class="text-slate-600 font-semibold">{{ dev.sim1Carrier || 'Airtel (Active)' }}</span>
+                    </div>
+                    <div class="flex items-center gap-1.5 text-[10px]" *ngIf="dev.sim2Available">
+                      <span class="px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 font-bold">SIM 2</span>
+                      <span class="text-slate-600 font-semibold">{{ dev.sim2Carrier || 'Jio' }}</span>
+                    </div>
+                  </div>
                 </td>
                 <td class="py-3.5 px-4">
                   <div class="flex items-center gap-2">
@@ -117,9 +128,18 @@ import { RelayDevice } from '../../models/alert21.models';
                     <span class="px-1.5 py-0.5 rounded bg-slate-100 font-mono text-[9px] font-bold text-slate-600 uppercase">{{ dev.networkType }}</span>
                   </div>
                 </td>
-                <td class="py-3.5 px-4 font-mono">
-                  <span class="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-bold text-[10px]">v{{ dev.configVersion }}</span>
-                  <span class="block text-[9px] text-slate-400 truncate max-w-[100px]">{{ dev.configChecksum }}</span>
+                <!-- Outbound SMS Gateway State -->
+                <td class="py-3.5 px-4">
+                  <div class="flex items-center gap-2">
+                    <button 
+                      type="button" 
+                      (click)="toggleSend(dev.id)"
+                      class="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider transition-all"
+                      [ngClass]="dev.allowSmsSend !== false ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-400'">
+                      {{ dev.allowSmsSend !== false ? 'SEND ON' : 'SEND OFF' }}
+                    </button>
+                    <span *ngIf="dev.isBlocked" class="px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 text-[9px] font-extrabold uppercase">BLOCKED</span>
+                  </div>
                 </td>
                 <td class="py-3.5 px-4">
                   <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider"
@@ -128,17 +148,25 @@ import { RelayDevice } from '../../models/alert21.models';
                   </span>
                   <span class="block text-[10px] text-slate-400 font-mono mt-0.5">{{ dev.lastSeenAt }}</span>
                 </td>
-                <td class="py-3.5 px-4 font-mono font-extrabold text-slate-900">
-                  {{ dev.todayRelayedCount | number }} events
+                <td class="py-3.5 px-4 font-mono">
+                  <div class="font-extrabold text-slate-900">{{ dev.todayRelayedCount | number }} in</div>
+                  <div class="text-[10px] text-indigo-600 font-bold">{{ dev.todaySentCount || 0 }} out</div>
                 </td>
                 <td class="py-3.5 px-4 text-right">
-                  <button 
-                    *ngIf="dev.status !== 'REVOKED'" 
-                    (click)="revoke(dev.id)" 
-                    class="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-[10px] font-bold border border-rose-200 transition-all">
-                    Revoke Token
-                  </button>
-                  <span *ngIf="dev.status === 'REVOKED'" class="text-[10px] text-slate-400 font-bold">REVOKED</span>
+                  <div class="flex items-center justify-end gap-1.5">
+                    <button 
+                      (click)="toggleBlock(dev.id)" 
+                      class="px-2 py-1 rounded-lg text-[10px] font-bold border transition-all"
+                      [ngClass]="dev.isBlocked ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'">
+                      {{ dev.isBlocked ? 'Unblock' : 'Block' }}
+                    </button>
+                    <button 
+                      *ngIf="dev.status !== 'REVOKED'" 
+                      (click)="revoke(dev.id)" 
+                      class="px-2 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-[10px] font-bold border border-rose-200 transition-all">
+                      Revoke
+                    </button>
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -170,11 +198,19 @@ export class RelayDevicesComponent implements OnInit {
   }
 
   getActiveCount(): number {
-    return this.relayService.devices().filter(d => d.status === 'ACTIVE').length;
+    return this.relayService.devices().filter(d => d.status === 'ACTIVE' || (d as any).connection_status === 'ONLINE').length;
   }
 
   refreshDevices() {
     this.relayService.fetchDevices();
+  }
+
+  toggleSend(id: string) {
+    this.relayService.toggleDeviceSend(id);
+  }
+
+  toggleBlock(id: string) {
+    this.relayService.toggleDeviceBlock(id);
   }
 
   revoke(id: string) {

@@ -60,6 +60,7 @@ import { RelayDevicesComponent } from './components/relay/relay-devices.componen
 import { RelayEventsComponent } from './components/relay/relay-events.component';
 import { RelayPackagesComponent } from './components/relay/relay-packages.component';
 import { RelayDiagnosticsComponent } from './components/relay/relay-diagnostics.component';
+import { RelayOutboundSmsComponent } from './components/relay/relay-outbound-sms.component';
 
 import { ToastComponent } from './components/shared/toast.component';
 
@@ -109,6 +110,7 @@ import { ToastComponent } from './components/shared/toast.component';
     RelayEventsComponent,
     RelayPackagesComponent,
     RelayDiagnosticsComponent,
+    RelayOutboundSmsComponent,
     DltApprovalsComponent,
     SenderIdsComponent,
     DltTemplatesComponent,
@@ -198,6 +200,7 @@ import { ToastComponent } from './components/shared/toast.component';
             <app-relay-events *ngIf="activeTab === 'relay-events'"></app-relay-events>
             <app-relay-packages *ngIf="activeTab === 'relay-packages'"></app-relay-packages>
             <app-relay-diagnostics *ngIf="activeTab === 'relay-diagnostics'" (navigate)="onTabChange($event)"></app-relay-diagnostics>
+            <app-relay-outbound-sms *ngIf="activeTab === 'relay-outbound'"></app-relay-outbound-sms>
 
             <!-- DLT & Gateway Components -->
             <app-dlt-approvals *ngIf="activeTab === 'dlt-pe'"></app-dlt-approvals>
@@ -229,7 +232,7 @@ export class AppComponent implements OnInit {
     'whatsapp-dashboard', 'whatsapp-config', 'whatsapp-accounts', 'whatsapp-numbers',
     'whatsapp-templates', 'whatsapp-campaigns', 'whatsapp-logs', 'whatsapp-webhook-logs', 'whatsapp-pricing',
     'relay-dashboard', 'relay-builder', 'relay-templates', 'relay-sources', 'relay-variables', 'relay-devices',
-    'relay-events', 'relay-packages', 'relay-diagnostics',
+    'relay-events', 'relay-packages', 'relay-diagnostics', 'relay-outbound',
     'dlt-pe', 'dlt-sender', 'dlt-template', 'providers', 'provider-routing',
     'dlt-hash-tool', 'sms-logs', 'audit-logs', 'settings'
   ];
