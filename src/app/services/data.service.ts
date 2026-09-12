@@ -65,6 +65,7 @@ export class DataService {
   // Task #05 Billing & Balance Signals
   pricingSlabs = signal<PricingSlab[]>([]);
   bankTransfers = signal<BankTransferRequest[]>([]);
+  companyBankAccounts = signal<any[]>([]);
   billingStats = signal<BillingDashboardStats | null>(null);
   userLedger = signal<SmsLedgerEntry[]>([]);
 
@@ -124,6 +125,7 @@ export class DataService {
     this.fetchLiveBankTransfers();
     this.fetchMonitoringBankTransfers();
     this.fetchEmailBankTransfers();
+    this.fetchCompanyBankAccounts();
     this.fetchBillingDashboardStats();
     this.fetchPaymentSettings();
   }
@@ -1137,6 +1139,143 @@ export class DataService {
     } catch (e: any) {
       console.error('Update payment settings error', e);
       this.toastService.showError('Update Failed', e?.error?.message || 'Failed to update payment settings.');
+    }
+    return false;
+  }
+
+  /**
+   * =====================================================
+   * BENEFICIARY COMPANY BANK ACCOUNTS (ADMIN MANAGEMENT)
+   * =====================================================
+   */
+
+  async fetchCompanyBankAccounts(): Promise<any[]> {
+    try {
+      const token = this.authService.authToken();
+      const headers = new HttpHeaders({
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      });
+      const res = await firstValueFrom(
+        this.http.get<any>('https://app.alert21.in/back/api/admin/billing/bank-accounts', { headers }).pipe(
+          catchError(() => of({ data: { accounts: [] } }))
+        )
+      );
+      const accounts = res?.data?.accounts || res?.data || (Array.isArray(res) ? res : []);
+      this.companyBankAccounts.set(accounts);
+      return accounts;
+    } catch (err) {
+      console.error('Failed to fetch company bank accounts', err);
+      return [];
+    }
+  }
+
+  async createCompanyBankAccount(data: any): Promise<boolean> {
+    try {
+      const token = this.authService.authToken();
+      const headers = new HttpHeaders({
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      });
+      const res = await firstValueFrom(
+        this.http.post<any>('https://app.alert21.in/back/api/admin/billing/bank-accounts', data, { headers })
+      );
+      if (res?.success) {
+        this.toastService.showSuccess('Bank Account Added', 'New beneficiary bank account added successfully.');
+        await this.fetchCompanyBankAccounts();
+        return true;
+      }
+    } catch (err: any) {
+      console.error('Create bank account error', err);
+      this.toastService.showError('Creation Failed', err?.error?.message || 'Failed to add bank account.');
+    }
+    return false;
+  }
+
+  async updateCompanyBankAccount(id: string, data: any): Promise<boolean> {
+    try {
+      const token = this.authService.authToken();
+      const headers = new HttpHeaders({
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      });
+      const res = await firstValueFrom(
+        this.http.put<any>(`https://app.alert21.in/back/api/admin/billing/bank-accounts/${id}`, data, { headers })
+      );
+      if (res?.success) {
+        this.toastService.showSuccess('Bank Account Updated', 'Bank account details updated successfully.');
+        await this.fetchCompanyBankAccounts();
+        return true;
+      }
+    } catch (err: any) {
+      console.error('Update bank account error', err);
+      this.toastService.showError('Update Failed', err?.error?.message || 'Failed to update bank account.');
+    }
+    return false;
+  }
+
+  async deleteCompanyBankAccount(id: string): Promise<boolean> {
+    try {
+      const token = this.authService.authToken();
+      const headers = new HttpHeaders({
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      });
+      const res = await firstValueFrom(
+        this.http.delete<any>(`https://app.alert21.in/back/api/admin/billing/bank-accounts/${id}`, { headers })
+      );
+      if (res?.success) {
+        this.toastService.showSuccess('Bank Account Deleted', 'Bank account removed successfully.');
+        await this.fetchCompanyBankAccounts();
+        return true;
+      }
+    } catch (err: any) {
+      console.error('Delete bank account error', err);
+      this.toastService.showError('Delete Failed', err?.error?.message || 'Failed to delete bank account.');
+    }
+    return false;
+  }
+
+  async setPrimaryCompanyBankAccount(id: string): Promise<boolean> {
+    try {
+      const token = this.authService.authToken();
+      const headers = new HttpHeaders({
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      });
+      const res = await firstValueFrom(
+        this.http.patch<any>(`https://app.alert21.in/back/api/admin/billing/bank-accounts/${id}/primary`, {}, { headers })
+      );
+      if (res?.success) {
+        this.toastService.showSuccess('Primary Account Set', 'Primary payment account updated.');
+        await this.fetchCompanyBankAccounts();
+        return true;
+      }
+    } catch (err: any) {
+      console.error('Set primary bank account error', err);
+      this.toastService.showError('Action Failed', err?.error?.message || 'Failed to set primary account.');
+    }
+    return false;
+  }
+
+  async toggleCompanyBankAccountStatus(id: string): Promise<boolean> {
+    try {
+      const token = this.authService.authToken();
+      const headers = new HttpHeaders({
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      });
+      const res = await firstValueFrom(
+        this.http.patch<any>(`https://app.alert21.in/back/api/admin/billing/bank-accounts/${id}/toggle-status`, {}, { headers })
+      );
+      if (res?.success) {
+        this.toastService.showSuccess('Status Updated', 'Bank account status changed.');
+        await this.fetchCompanyBankAccounts();
+        return true;
+      }
+    } catch (err: any) {
+      console.error('Toggle status error', err);
+      this.toastService.showError('Action Failed', err?.error?.message || 'Failed to toggle status.');
     }
     return false;
   }

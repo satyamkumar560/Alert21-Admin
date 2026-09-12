@@ -113,6 +113,17 @@ import { IconComponent } from '../shared/icon.component';
             {{ pendingWhatsappCount() }} PENDING
           </span>
         </button>
+
+        <button 
+          (click)="setCategory('BANK_ACCOUNTS')"
+          [class]="selectedCategory === 'BANK_ACCOUNTS' ? 'bg-indigo-600 text-white font-extrabold shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 font-semibold'"
+          class="px-4 py-2 rounded-xl text-xs flex items-center gap-2 transition-all whitespace-nowrap">
+          <app-icon name="building" [size]="14"></app-icon>
+          <span>Official Company Bank Accounts</span>
+          <span class="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 text-[10px] font-black">
+            {{ dataService.companyBankAccounts().length }} ACCOUNTS
+          </span>
+        </button>
       </div>
 
       <!-- Overview Stats Cards -->
@@ -498,9 +509,177 @@ import { IconComponent } from '../shared/icon.component';
             </tbody>
           </table>
         </div>
+
+        <!-- 5. COMPANY BANK ACCOUNTS (OFFICIAL BENEFICIARY) -->
+        <div *ngIf="selectedCategory === 'BANK_ACCOUNTS'" class="p-5 space-y-4">
+          <div class="flex items-center justify-between pb-2">
+            <div>
+              <h3 class="text-sm font-extrabold text-slate-900">Official Company Bank Accounts</h3>
+              <p class="text-xs text-slate-500">Manage bank accounts displayed to users for NEFT, IMPS, RTGS, and UPI offline payments.</p>
+            </div>
+            <button (click)="openAddBankModal()" class="btn btn-primary btn-sm flex items-center gap-1.5 shadow-sm bg-indigo-600 hover:bg-indigo-700 text-white">
+              <app-icon name="plus" [size]="14"></app-icon>
+              <span>Add New Bank Account</span>
+            </button>
+          </div>
+
+          <table class="data-table w-full">
+            <thead>
+              <tr>
+                <th>Bank &amp; Account Details</th>
+                <th>Account Holder Name</th>
+                <th>IFSC &amp; Branch</th>
+                <th>Account Type</th>
+                <th>UPI ID</th>
+                <th>Primary / Default</th>
+                <th>Status</th>
+                <th class="text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let acc of dataService.companyBankAccounts()" class="border-b border-slate-100 hover:bg-slate-50/50">
+                <td>
+                  <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
+                      <app-icon name="building" [size]="16"></app-icon>
+                    </div>
+                    <div>
+                      <div class="font-extrabold text-xs text-slate-900">{{ acc.bank_name }}</div>
+                      <div class="font-mono text-xs text-slate-600 font-bold">A/C: {{ acc.account_number }}</div>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <span class="text-xs font-bold text-slate-900">{{ acc.account_name }}</span>
+                </td>
+                <td>
+                  <div class="font-mono text-xs font-bold text-slate-800">{{ acc.ifsc_code }}</div>
+                  <div class="text-[11px] text-slate-500">{{ acc.branch_name || 'Main Branch' }}</div>
+                </td>
+                <td>
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
+                    {{ acc.account_type || 'Current Account' }}
+                  </span>
+                </td>
+                <td>
+                  <span *ngIf="acc.upi_id" class="font-mono text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
+                    {{ acc.upi_id }}
+                  </span>
+                  <span *ngIf="!acc.upi_id" class="text-xs text-slate-400 italic">None</span>
+                </td>
+                <td>
+                  <span *ngIf="acc.is_primary" class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 uppercase tracking-wider">
+                    <app-icon name="check-circle" [size]="10"></app-icon> Primary
+                  </span>
+                  <button *ngIf="!acc.is_primary" (click)="setPrimaryBank(acc)" class="text-[11px] font-bold text-indigo-600 hover:underline cursor-pointer">
+                    Set Primary
+                  </button>
+                </td>
+                <td>
+                  <button (click)="toggleBankStatus(acc)" class="cursor-pointer">
+                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider"
+                      [ngClass]="acc.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'">
+                      {{ acc.status }}
+                    </span>
+                  </button>
+                </td>
+                <td class="text-right">
+                  <div class="flex items-center justify-end gap-2">
+                    <button (click)="openEditBankModal(acc)" class="btn btn-outline btn-sm text-[11px] py-1 px-2 text-indigo-600 border-indigo-200 hover:bg-indigo-50" title="Edit Bank Details">
+                      <app-icon name="edit" [size]="12"></app-icon>
+                      <span>Edit</span>
+                    </button>
+                    <button (click)="openDeleteBankModal(acc)" class="btn btn-outline btn-sm text-[11px] py-1 px-2 text-rose-600 border-rose-200 hover:bg-rose-50" title="Delete Account">
+                      <app-icon name="trash" [size]="12"></app-icon>
+                      <span>Delete</span>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              <tr *ngIf="dataService.companyBankAccounts().length === 0">
+                <td colspan="8" class="py-12 text-center text-slate-400">
+                  <p class="font-bold text-slate-600">No Company Bank Accounts Found</p>
+                  <p class="text-xs text-slate-400 mt-1">Click "Add New Bank Account" to configure an official beneficiary account.</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <!-- Modals -->
+      <div *ngIf="showBankModal" class="modal-backdrop" (click)="showBankModal = false">
+        <div class="modal-card p-6 border border-slate-200 max-w-lg bg-white rounded-2xl shadow-2xl space-y-4" (click)="$event.stopPropagation()">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <h3 class="text-base font-extrabold text-slate-900">
+              {{ isEditingBank ? 'Edit Company Bank Account' : 'Add New Company Bank Account' }}
+            </h3>
+            <button (click)="showBankModal = false" class="text-slate-400 hover:text-slate-600"><app-icon name="x" [size]="16"></app-icon></button>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
+            <div class="sm:col-span-2">
+              <label class="block font-bold text-slate-700 mb-1">Account Holder Name *</label>
+              <input type="text" [(ngModel)]="bankForm.account_name" class="w-full p-2.5 border border-slate-200 rounded-xl text-xs font-semibold" placeholder="e.g. ALERT21 TECHNOLOGIES PVT LTD" />
+            </div>
+
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Bank Name *</label>
+              <input type="text" [(ngModel)]="bankForm.bank_name" class="w-full p-2.5 border border-slate-200 rounded-xl text-xs font-semibold" placeholder="e.g. HDFC Bank Ltd." />
+            </div>
+
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Account Number *</label>
+              <input type="text" [(ngModel)]="bankForm.account_number" class="w-full p-2.5 border border-slate-200 rounded-xl text-xs font-mono font-bold" placeholder="e.g. 50200084920194" />
+            </div>
+
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">IFSC Code *</label>
+              <input type="text" [(ngModel)]="bankForm.ifsc_code" class="w-full p-2.5 border border-slate-200 rounded-xl text-xs font-mono font-bold uppercase" placeholder="e.g. HDFC0000240" />
+            </div>
+
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Account Type *</label>
+              <select [(ngModel)]="bankForm.account_type" class="w-full p-2.5 border border-slate-200 rounded-xl text-xs font-semibold bg-white">
+                <option value="Current Account">Current Account</option>
+                <option value="Savings Account">Savings Account</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Branch Name (Optional)</label>
+              <input type="text" [(ngModel)]="bankForm.branch_name" class="w-full p-2.5 border border-slate-200 rounded-xl text-xs font-semibold" placeholder="e.g. Sector 62 Branch" />
+            </div>
+
+            <div class="sm:col-span-2 pt-2">
+              <label class="flex items-center gap-2 cursor-pointer font-bold text-slate-800">
+                <input type="checkbox" [(ngModel)]="bankForm.is_primary" class="w-4 h-4 text-indigo-600 rounded" />
+                <span>Mark as Primary Official Beneficiary Account</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="pt-4 border-t border-slate-100 flex justify-end gap-3">
+            <button (click)="showBankModal = false" class="btn btn-outline btn-sm">Cancel</button>
+            <button (click)="saveBankAccount()" [disabled]="isSubmitting" class="btn btn-primary btn-sm bg-indigo-600 hover:bg-indigo-700 text-white">
+              {{ isEditingBank ? 'Save Changes' : 'Create Bank Account' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Delete Bank Modal -->
+      <div *ngIf="showDeleteBankModal" class="modal-backdrop" (click)="showDeleteBankModal = false">
+        <div class="modal-card p-6 border border-slate-200 max-w-md bg-white rounded-2xl shadow-2xl space-y-3" (click)="$event.stopPropagation()">
+          <h3 class="text-base font-extrabold text-slate-900">Delete Bank Account</h3>
+          <p class="text-xs text-slate-600">Are you sure you want to remove <strong>{{ deletingBankName }}</strong> from beneficiary accounts?</p>
+          <div class="pt-4 border-t border-slate-100 flex justify-end gap-3">
+            <button (click)="showDeleteBankModal = false" class="btn btn-outline btn-sm">Cancel</button>
+            <button (click)="confirmDeleteBank()" [disabled]="isSubmitting" class="btn btn-primary btn-sm bg-rose-600 hover:bg-rose-700 text-white">Delete</button>
+          </div>
+        </div>
+      </div>
+
       <div *ngIf="showApproveSmsModal && selectedSmsReq" class="modal-backdrop" (click)="showApproveSmsModal = false">
         <div class="modal-card p-6 border border-slate-200 max-w-md bg-white rounded-2xl shadow-2xl" (click)="$event.stopPropagation()">
           <h3 class="text-base font-extrabold text-slate-900 mb-2">Approve SMS Bank Transfer</h3>
@@ -579,7 +758,7 @@ export class BankTransfersComponent implements OnInit, OnDestroy {
   authService = inject(AuthService);
   private http = inject(HttpClient);
 
-  selectedCategory: 'SMS' | 'MONITORING' | 'EMAIL' | 'WHATSAPP' = 'SMS';
+  selectedCategory: 'SMS' | 'MONITORING' | 'EMAIL' | 'WHATSAPP' | 'BANK_ACCOUNTS' = 'SMS';
   activeFilter: 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED' = 'ALL';
   searchQuery = '';
 
@@ -609,13 +788,13 @@ export class BankTransfersComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     const saved = localStorage.getItem('alert21_admin_bank_transfer_category');
-    if (saved && ['SMS', 'MONITORING', 'EMAIL', 'WHATSAPP'].includes(saved)) {
+    if (saved && ['SMS', 'MONITORING', 'EMAIL', 'WHATSAPP', 'BANK_ACCOUNTS'].includes(saved)) {
       this.selectedCategory = saved as any;
     }
     this.refreshAll();
   }
 
-  setCategory(cat: 'SMS' | 'MONITORING' | 'EMAIL' | 'WHATSAPP') {
+  setCategory(cat: 'SMS' | 'MONITORING' | 'EMAIL' | 'WHATSAPP' | 'BANK_ACCOUNTS') {
     this.selectedCategory = cat;
     localStorage.setItem('alert21_admin_bank_transfer_category', cat);
   }
@@ -632,6 +811,7 @@ export class BankTransfersComponent implements OnInit, OnDestroy {
     this.dataService.fetchMonitoringBankTransfers();
     this.dataService.fetchEmailBankTransfers();
     this.dataService.fetchWhatsappBankTransfers();
+    this.dataService.fetchCompanyBankAccounts();
   }
 
   async toggleManualPaymentSetting(field: 'allow_manual_payment' | 'allow_whatsapp_manual_payment' | 'allow_sms_manual_payment' | 'allow_email_manual_payment' | 'allow_monitoring_manual_payment') {
@@ -818,4 +998,110 @@ export class BankTransfersComponent implements OnInit, OnDestroy {
     this.isSubmitting = false;
     if (success) this.showRejectModal = false;
   }
+
+  // =====================================================
+  // COMPANY BANK ACCOUNTS MANAGEMENT (ADD / EDIT / DELETE)
+  // =====================================================
+  showBankModal = false;
+  isEditingBank = false;
+  editingBankId = '';
+  showDeleteBankModal = false;
+  deletingBankId = '';
+  deletingBankName = '';
+
+  bankForm = {
+    account_name: '',
+    account_number: '',
+    ifsc_code: '',
+    bank_name: '',
+    account_type: 'Current Account',
+    upi_id: '',
+    branch_name: '',
+    is_primary: false,
+  };
+
+  openAddBankModal() {
+    this.isEditingBank = false;
+    this.editingBankId = '';
+    this.bankForm = {
+      account_name: '',
+      account_number: '',
+      ifsc_code: '',
+      bank_name: '',
+      account_type: 'Current Account',
+      upi_id: '',
+      branch_name: '',
+      is_primary: this.dataService.companyBankAccounts().length === 0,
+    };
+    this.showBankModal = true;
+  }
+
+  openEditBankModal(acc: any) {
+    this.isEditingBank = true;
+    this.editingBankId = acc._id || acc.id;
+    this.bankForm = {
+      account_name: acc.account_name || '',
+      account_number: acc.account_number || '',
+      ifsc_code: acc.ifsc_code || '',
+      bank_name: acc.bank_name || '',
+      account_type: acc.account_type || 'Current Account',
+      upi_id: acc.upi_id || '',
+      branch_name: acc.branch_name || '',
+      is_primary: acc.is_primary === true,
+    };
+    this.showBankModal = true;
+  }
+
+  async saveBankAccount() {
+    if (!this.bankForm.account_name.trim() || !this.bankForm.account_number.trim() || !this.bankForm.ifsc_code.trim() || !this.bankForm.bank_name.trim()) {
+      alert('Account Holder Name, Account Number, IFSC Code, and Bank Name are required.');
+      return;
+    }
+
+    this.isSubmitting = true;
+    try {
+      if (this.isEditingBank && this.editingBankId) {
+        const success = await this.dataService.updateCompanyBankAccount(this.editingBankId, this.bankForm);
+        if (success) this.showBankModal = false;
+      } else {
+        const success = await this.dataService.createCompanyBankAccount(this.bankForm);
+        if (success) this.showBankModal = false;
+      }
+    } finally {
+      this.isSubmitting = false;
+    }
+  }
+
+  openDeleteBankModal(acc: any) {
+    this.deletingBankId = acc._id || acc.id;
+    this.deletingBankName = `${acc.bank_name} (${acc.account_number})`;
+    this.showDeleteBankModal = true;
+  }
+
+  async confirmDeleteBank() {
+    if (!this.deletingBankId) return;
+    this.isSubmitting = true;
+    try {
+      const success = await this.dataService.deleteCompanyBankAccount(this.deletingBankId);
+      if (success) {
+        this.showDeleteBankModal = false;
+        this.deletingBankId = '';
+      }
+    } finally {
+      this.isSubmitting = false;
+    }
+  }
+
+  async setPrimaryBank(acc: any) {
+    const id = acc._id || acc.id;
+    if (!id) return;
+    await this.dataService.setPrimaryCompanyBankAccount(id);
+  }
+
+  async toggleBankStatus(acc: any) {
+    const id = acc._id || acc.id;
+    if (!id) return;
+    await this.dataService.toggleCompanyBankAccountStatus(id);
+  }
 }
+

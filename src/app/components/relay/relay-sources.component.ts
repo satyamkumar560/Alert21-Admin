@@ -158,9 +158,14 @@ import { RelaySource, RelaySender, RelaySourceType, RelaySenderMatchMode } from 
                   {{ src.notes || '—' }}
                 </td>
                 <td class="py-3.5 px-4 text-right">
-                  <button (click)="openEditSourceModal(src)" class="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-slate-100 transition-all mr-1">
-                    <app-icon name="edit" [size]="14"></app-icon>
-                  </button>
+                  <div class="flex items-center justify-end gap-1.5">
+                    <button 
+                      (click)="openEditSourceModal(src)" 
+                      class="px-2.5 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs flex items-center gap-1.5 border border-indigo-200 shadow-sm transition-all cursor-pointer">
+                      <app-icon name="edit" [size]="13"></app-icon>
+                      <span>Edit</span>
+                    </button>
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -214,9 +219,17 @@ import { RelaySource, RelaySender, RelaySourceType, RelaySenderMatchMode } from 
                   </span>
                 </td>
                 <td class="py-3.5 px-4 text-right">
-                  <button (click)="relayService.deleteSender(snd.id)" class="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all">
-                    <app-icon name="trash" [size]="14"></app-icon>
-                  </button>
+                  <div class="flex items-center justify-end gap-1.5">
+                    <button 
+                      (click)="openEditSenderModal(snd)" 
+                      class="px-2.5 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs flex items-center gap-1.5 border border-indigo-200 shadow-sm transition-all cursor-pointer">
+                      <app-icon name="edit" [size]="13"></app-icon>
+                      <span>Edit</span>
+                    </button>
+                    <button (click)="relayService.deleteSender(snd.id)" class="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all cursor-pointer" title="Delete Sender ID">
+                      <app-icon name="trash" [size]="14"></app-icon>
+                    </button>
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -288,11 +301,11 @@ import { RelaySource, RelaySender, RelaySourceType, RelaySenderMatchMode } from 
         </div>
       </div>
 
-      <!-- ADD SENDER ID MODAL -->
+      <!-- ADD/EDIT SENDER ID MODAL -->
       <div *ngIf="showSenderModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
           <div class="flex items-center justify-between border-b pb-3">
-            <h3 class="font-extrabold text-slate-900 text-base">Map Sender ID Alias</h3>
+            <h3 class="font-extrabold text-slate-900 text-base">{{ editingSenderId ? 'Edit Sender ID Alias' : 'Map Sender ID Alias' }}</h3>
             <button (click)="showSenderModal = false" class="text-slate-400 hover:text-slate-600"><app-icon name="x" [size]="18"></app-icon></button>
           </div>
 
@@ -340,7 +353,7 @@ import { RelaySource, RelaySender, RelaySourceType, RelaySenderMatchMode } from 
           <div class="flex items-center justify-end gap-2 pt-3 border-t">
             <button (click)="showSenderModal = false" class="px-4 py-2 rounded-xl text-slate-600 text-xs font-semibold hover:bg-slate-100">Cancel</button>
             <button (click)="saveSender()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md">
-              Save Sender ID
+              {{ editingSenderId ? 'Save Changes' : 'Save Sender ID' }}
             </button>
           </div>
         </div>
@@ -374,6 +387,7 @@ export class RelaySourcesComponent implements OnInit {
   };
 
   showSenderModal = false;
+  editingSenderId: string | null = null;
   senderForm = {
     sourceId: '',
     sourceCode: '',
@@ -460,6 +474,7 @@ export class RelaySourcesComponent implements OnInit {
   }
 
   openAddSenderModal(source?: RelaySource) {
+    this.editingSenderId = null;
     const src = source || this.relayService.sources()[0];
     this.senderForm = {
       sourceId: src ? src.id : '',
@@ -472,6 +487,23 @@ export class RelaySourcesComponent implements OnInit {
       aliasGroup: '',
       matchMode: 'EXACT',
       status: 'ACTIVE'
+    };
+    this.showSenderModal = true;
+  }
+
+  openEditSenderModal(snd: RelaySender) {
+    this.editingSenderId = snd.id;
+    this.senderForm = {
+      sourceId: snd.sourceId || '',
+      sourceCode: snd.sourceCode || '',
+      sourceName: snd.sourceName || '',
+      senderValue: snd.senderValue || '',
+      normalisedSender: snd.normalisedSender || '',
+      priority: snd.priority || 100,
+      exactMatch: snd.exactMatch ?? true,
+      aliasGroup: snd.aliasGroup || '',
+      matchMode: (snd.matchMode as RelaySenderMatchMode) || 'EXACT',
+      status: (snd.status as 'ACTIVE' | 'INACTIVE') || 'ACTIVE'
     };
     this.showSenderModal = true;
   }
@@ -493,15 +525,18 @@ export class RelaySourcesComponent implements OnInit {
   async saveSender() {
     if (!this.senderForm.sourceId || !this.senderForm.senderValue.trim()) return;
     
-    // If source already has an existing sender mapped, remove the old one first so only single sender remains
-    const existingSenders = this.getSendersForSource(this.senderForm.sourceId);
-    if (existingSenders.length > 0) {
-      for (const oldSender of existingSenders) {
-        await this.relayService.deleteSender(oldSender.id);
+    if (this.editingSenderId) {
+      await this.relayService.updateSender(this.editingSenderId, this.senderForm);
+    } else {
+      // If source already has an existing sender mapped, remove the old one first so only single sender remains
+      const existingSenders = this.getSendersForSource(this.senderForm.sourceId);
+      if (existingSenders.length > 0) {
+        for (const oldSender of existingSenders) {
+          await this.relayService.deleteSender(oldSender.id);
+        }
       }
+      await this.relayService.addSender(this.senderForm);
     }
-
-    await this.relayService.addSender(this.senderForm);
     this.showSenderModal = false;
   }
 
