@@ -27,18 +27,19 @@ import { IconComponent } from '../shared/icon.component';
         </button>
       </div>
 
-      <!-- Manual Payment Master Switch & Permissions Banner -->
-      <div class="bg-white border rounded-2xl p-4 sm:p-5 shadow-sm transition-all"
-        [ngClass]="dataService.paymentSettings().allow_manual_payment ? 'border-emerald-200 bg-emerald-50/20' : 'border-amber-200 bg-amber-50/30'">
-        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div class="flex items-start sm:items-center gap-3.5">
+      <!-- Payment Channels Master Controls: Manual Bank Transfer & Online Gateway -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <!-- 1. Manual Bank Transfer Switch -->
+        <div class="bg-white border rounded-2xl p-4 sm:p-5 shadow-sm transition-all flex flex-col justify-between"
+          [ngClass]="dataService.paymentSettings().allow_manual_payment ? 'border-emerald-200 bg-emerald-50/20' : 'border-amber-200 bg-amber-50/30'">
+          <div class="flex items-start sm:items-center gap-3.5 mb-4">
             <div class="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 shadow-sm"
               [ngClass]="dataService.paymentSettings().allow_manual_payment ? 'bg-emerald-500 text-white shadow-emerald-500/20' : 'bg-amber-500 text-white shadow-amber-500/20'">
               <app-icon [name]="dataService.paymentSettings().allow_manual_payment ? 'check-circle' : 'shield'" [size]="22"></app-icon>
             </div>
             <div>
               <div class="flex items-center gap-2 flex-wrap">
-                <h3 class="text-sm font-extrabold text-slate-900">User Manual / Bank Transfer Gateway Option</h3>
+                <h3 class="text-sm font-extrabold text-slate-900">Manual / Bank Transfer Gateway</h3>
                 <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider"
                   [ngClass]="dataService.paymentSettings().allow_manual_payment ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'">
                   {{ dataService.paymentSettings().allow_manual_payment ? 'Enabled for Users' : 'Disabled for Users' }}
@@ -46,23 +47,60 @@ import { IconComponent } from '../shared/icon.component';
               </div>
               <p class="text-xs text-slate-500 mt-1">
                 {{ dataService.paymentSettings().allow_manual_payment 
-                  ? 'Users can view offline bank account details and submit UTR receipts across WhatsApp, SMS, Email & Monitoring billing pages.' 
-                  : 'Manual / Bank Transfer payment options are completely HIDDEN across all user billing pages. Users can only pay via automated gateways.' }}
+                  ? 'Users can view offline bank details and submit UTR receipts across SMS, WhatsApp, Email & Monitoring.' 
+                  : 'Manual / Bank Transfer options are completely HIDDEN from all billing pages.' }}
               </p>
             </div>
           </div>
 
-          <!-- Master Action Toggle Button -->
-          <div class="flex items-center gap-2 shrink-0">
+          <div class="flex items-center justify-end">
             <button
-              (click)="toggleManualPaymentSetting('allow_manual_payment')"
+              (click)="togglePaymentSetting('allow_manual_payment')"
               [disabled]="isTogglingManualPayment"
               class="px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-sm disabled:opacity-50"
               [ngClass]="dataService.paymentSettings().allow_manual_payment 
                 ? 'bg-rose-600 hover:bg-rose-700 text-white shadow-rose-600/20' 
                 : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20'">
               <app-icon [name]="dataService.paymentSettings().allow_manual_payment ? 'x' : 'check'" [size]="14"></app-icon>
-              <span>{{ dataService.paymentSettings().allow_manual_payment ? 'Disable Manual Payment Option' : 'Enable Manual Payment Option' }}</span>
+              <span>{{ dataService.paymentSettings().allow_manual_payment ? 'Disable Bank Transfer Option' : 'Enable Bank Transfer Option' }}</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 2. Online Payment Gateway (Razorpay) Switch -->
+        <div class="bg-white border rounded-2xl p-4 sm:p-5 shadow-sm transition-all flex flex-col justify-between"
+          [ngClass]="dataService.paymentSettings().allow_gateway_payment ? 'border-indigo-200 bg-indigo-50/20' : 'border-rose-200 bg-rose-50/30'">
+          <div class="flex items-start sm:items-center gap-3.5 mb-4">
+            <div class="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 shadow-sm"
+              [ngClass]="dataService.paymentSettings().allow_gateway_payment ? 'bg-indigo-600 text-white shadow-indigo-600/20' : 'bg-rose-500 text-white shadow-rose-500/20'">
+              <app-icon [name]="dataService.paymentSettings().allow_gateway_payment ? 'credit-card' : 'x-circle'" [size]="22"></app-icon>
+            </div>
+            <div>
+              <div class="flex items-center gap-2 flex-wrap">
+                <h3 class="text-sm font-extrabold text-slate-900">Instant Online Gateway (Razorpay)</h3>
+                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider"
+                  [ngClass]="dataService.paymentSettings().allow_gateway_payment ? 'bg-indigo-100 text-indigo-800' : 'bg-rose-100 text-rose-800'">
+                  {{ dataService.paymentSettings().allow_gateway_payment ? 'Enabled for Users' : 'Disabled for Users' }}
+                </span>
+              </div>
+              <p class="text-xs text-slate-500 mt-1">
+                {{ dataService.paymentSettings().allow_gateway_payment 
+                  ? 'Users can pay instantly via UPI, QR Code, Credit/Debit Cards, and NetBanking.' 
+                  : 'Online Payment Gateway is HIDDEN. Users can only pay via offline Bank Transfer.' }}
+              </p>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-end">
+            <button
+              (click)="togglePaymentSetting('allow_gateway_payment')"
+              [disabled]="isTogglingManualPayment"
+              class="px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-sm disabled:opacity-50"
+              [ngClass]="dataService.paymentSettings().allow_gateway_payment 
+                ? 'bg-rose-600 hover:bg-rose-700 text-white shadow-rose-600/20' 
+                : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-600/20'">
+              <app-icon [name]="dataService.paymentSettings().allow_gateway_payment ? 'x' : 'check'" [size]="14"></app-icon>
+              <span>{{ dataService.paymentSettings().allow_gateway_payment ? 'Disable Online Gateway Option' : 'Enable Online Gateway Option' }}</span>
             </button>
           </div>
         </div>
@@ -814,7 +852,7 @@ export class BankTransfersComponent implements OnInit, OnDestroy {
     this.dataService.fetchCompanyBankAccounts();
   }
 
-  async toggleManualPaymentSetting(field: 'allow_manual_payment' | 'allow_whatsapp_manual_payment' | 'allow_sms_manual_payment' | 'allow_email_manual_payment' | 'allow_monitoring_manual_payment') {
+  async togglePaymentSetting(field: 'allow_manual_payment' | 'allow_gateway_payment' | 'allow_whatsapp_manual_payment' | 'allow_whatsapp_gateway_payment' | 'allow_sms_manual_payment' | 'allow_sms_gateway_payment' | 'allow_email_manual_payment' | 'allow_email_gateway_payment' | 'allow_monitoring_manual_payment' | 'allow_monitoring_gateway_payment') {
     const current = this.dataService.paymentSettings();
     const newVal = !current[field];
     this.isTogglingManualPayment = true;

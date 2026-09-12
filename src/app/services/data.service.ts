@@ -99,19 +99,29 @@ export class DataService {
   whatsappPricingSlabs = signal<WhatsappPricingSlab[]>([]);
   whatsappBankTransfers = signal<WhatsappOrder[]>([]);
 
-  // Payment Settings (Manual Bank Transfer controls)
+  // Payment Settings (Manual Bank Transfer & Online Gateway controls)
   paymentSettings = signal<{
     allow_manual_payment: boolean;
+    allow_gateway_payment: boolean;
     allow_whatsapp_manual_payment: boolean;
+    allow_whatsapp_gateway_payment: boolean;
     allow_sms_manual_payment: boolean;
+    allow_sms_gateway_payment: boolean;
     allow_email_manual_payment: boolean;
+    allow_email_gateway_payment: boolean;
     allow_monitoring_manual_payment: boolean;
+    allow_monitoring_gateway_payment: boolean;
   }>({
     allow_manual_payment: true,
+    allow_gateway_payment: true,
     allow_whatsapp_manual_payment: true,
+    allow_whatsapp_gateway_payment: true,
     allow_sms_manual_payment: true,
+    allow_sms_gateway_payment: true,
     allow_email_manual_payment: true,
-    allow_monitoring_manual_payment: true
+    allow_email_gateway_payment: true,
+    allow_monitoring_manual_payment: true,
+    allow_monitoring_gateway_payment: true
   });
 
   constructor() {
@@ -1095,15 +1105,20 @@ export class DataService {
         const data = response.data || response;
         this.paymentSettings.set({
           allow_manual_payment: data.allow_manual_payment !== false,
+          allow_gateway_payment: data.allow_gateway_payment !== false,
           allow_whatsapp_manual_payment: data.allow_whatsapp_manual_payment !== false,
+          allow_whatsapp_gateway_payment: data.allow_whatsapp_gateway_payment !== false,
           allow_sms_manual_payment: data.allow_sms_manual_payment !== false,
+          allow_sms_gateway_payment: data.allow_sms_gateway_payment !== false,
           allow_email_manual_payment: data.allow_email_manual_payment !== false,
-          allow_monitoring_manual_payment: data.allow_monitoring_manual_payment !== false
+          allow_email_gateway_payment: data.allow_email_gateway_payment !== false,
+          allow_monitoring_manual_payment: data.allow_monitoring_manual_payment !== false,
+          allow_monitoring_gateway_payment: data.allow_monitoring_gateway_payment !== false
         });
         return data;
       }
     } catch (e) {
-      console.warn('Bank payment settings API fallback.', e);
+      console.warn('Payment settings API fallback.', e);
     }
     return null;
   }
@@ -1113,10 +1128,15 @@ export class DataService {
    */
   async updatePaymentSettings(settings: Partial<{
     allow_manual_payment: boolean;
+    allow_gateway_payment: boolean;
     allow_whatsapp_manual_payment: boolean;
+    allow_whatsapp_gateway_payment: boolean;
     allow_sms_manual_payment: boolean;
+    allow_sms_gateway_payment: boolean;
     allow_email_manual_payment: boolean;
+    allow_email_gateway_payment: boolean;
     allow_monitoring_manual_payment: boolean;
+    allow_monitoring_gateway_payment: boolean;
   }>): Promise<boolean> {
     try {
       const token = this.authService.authToken();
