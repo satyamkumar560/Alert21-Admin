@@ -484,17 +484,23 @@ export interface EmailSender {
   createdAt: string;
 }
 
+export type EmailTemplateStatus = 'DRAFT' | 'ACTIVE' | 'AUTO_APPROVED' | 'PENDING_REVIEW' | 'REJECTED' | 'SUSPENDED' | 'INACTIVE';
+
 export interface EmailTemplate {
   id: string;
   userId: string;
   userName: string;
   userEmail: string;
   name: string;
+  category?: string;
   subject: string;
   htmlBody: string;
   plainTextBody?: string;
   variables: string[];
-  status: 'DRAFT' | 'ACTIVE' | 'INACTIVE';
+  requiredDynamicVariables?: string[];
+  referencedBrandVariables?: string[];
+  status: EmailTemplateStatus;
+  rejectionReason?: string;
   createdAt: string;
   updatedAt?: string;
 }
@@ -544,6 +550,27 @@ export interface EmailPricingSlab {
   isActive: boolean;
   description?: string;
   createdAt?: string;
+}
+
+export interface EmailPackageMaster {
+  id?: string;
+  _id?: string;
+  code: string;
+  name: string;
+  credits: number;
+  basePrice: number;
+  effectiveRate?: number;
+  gstPercent: number;
+  validityDays: number;
+  domainLimit: number;
+  senderLimit: number;
+  logRetentionDays: number;
+  active: boolean;
+  isFreeTrial: boolean;
+  displayOrder: number;
+  description?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface EmailDashboardStats {

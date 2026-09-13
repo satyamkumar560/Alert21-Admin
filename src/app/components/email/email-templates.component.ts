@@ -41,6 +41,22 @@ import { EmailTemplate } from '../../models/alert21.models';
             class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 pl-9 pr-3.5 text-xs text-slate-800 focus:outline-none focus:bg-white focus:border-indigo-500 font-medium transition-all"
           />
         </div>
+
+        <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl w-full md:w-auto overflow-x-auto">
+          <button (click)="statusFilter = 'ALL'" [class.bg-white]="statusFilter === 'ALL'" [class.shadow-xs]="statusFilter === 'ALL'" class="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-700 transition-all">
+            All ({{ dataService.emailTemplates().length }})
+          </button>
+          <button (click)="statusFilter = 'PENDING_REVIEW'" [class.bg-white]="statusFilter === 'PENDING_REVIEW'" [class.shadow-xs]="statusFilter === 'PENDING_REVIEW'" class="px-3 py-1.5 rounded-lg text-xs font-bold text-amber-700 flex items-center gap-1.5 transition-all">
+            <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+            <span>Pending Review ({{ countPending() }})</span>
+          </button>
+          <button (click)="statusFilter = 'ACTIVE'" [class.bg-white]="statusFilter === 'ACTIVE'" [class.shadow-xs]="statusFilter === 'ACTIVE'" class="px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-700 transition-all">
+            Active
+          </button>
+          <button (click)="statusFilter = 'REJECTED'" [class.bg-white]="statusFilter === 'REJECTED'" [class.shadow-xs]="statusFilter === 'REJECTED'" class="px-3 py-1.5 rounded-lg text-xs font-bold text-rose-700 transition-all">
+            Rejected
+          </button>
+        </div>
       </div>
 
       <!-- Templates Table -->
@@ -97,7 +113,12 @@ import { EmailTemplate } from '../../models/alert21.models';
                 <!-- Status -->
                 <td class="py-3.5 px-4">
                   <span class="px-2.5 py-1 rounded-lg text-[10px] font-bold font-mono uppercase"
-                        [ngClass]="t.status === 'ACTIVE' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-600'">
+                        [ngClass]="{
+                          'bg-emerald-50 text-emerald-700 border border-emerald-200': t.status === 'ACTIVE' || t.status === 'AUTO_APPROVED',
+                          'bg-amber-50 text-amber-700 border border-amber-200': t.status === 'PENDING_REVIEW',
+                          'bg-rose-50 text-rose-700 border border-rose-200': t.status === 'REJECTED',
+                          'bg-slate-100 text-slate-600': t.status === 'SUSPENDED'
+                        }">
                     {{ t.status }}
                   </span>
                 </td>
@@ -109,9 +130,17 @@ import { EmailTemplate } from '../../models/alert21.models';
 
                 <!-- Actions -->
                 <td class="py-3.5 px-4 text-right">
-                  <button (click)="openPreview(t)" class="px-2.5 py-1 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-100 font-bold text-[11px] transition-all">
-                    HTML Preview
-                  </button>
+                  <div class="flex items-center justify-end gap-1.5">
+                    <button (click)="openPreview(t)" class="px-2.5 py-1 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-100 font-bold text-[11px] transition-all">
+                      Preview
+                    </button>
+                    <button *ngIf="t.status === 'PENDING_REVIEW' || t.status === 'REJECTED'" (click)="approve(t)" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] transition-all">
+                      Approve
+                    </button>
+                    <button *ngIf="t.status === 'PENDING_REVIEW' || t.status === 'ACTIVE'" (click)="openRejectModal(t)" class="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-[11px] transition-all">
+                      Reject
+                    </button>
+                  </div>
                 </td>
               </tr>
 
@@ -146,8 +175,39 @@ import { EmailTemplate } from '../../models/alert21.models';
 
           <div class="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
             <span class="text-slate-500 font-mono">Variables: {{ selectedTemplate.variables.join(', ') || 'None' }}</span>
-            <button (click)="selectedTemplate = null" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200">
-              Close Preview
+            <div class="flex items-center gap-2">
+              <button *ngIf="selectedTemplate.status === 'PENDING_REVIEW'" (click)="approve(selectedTemplate); selectedTemplate = null" class="px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700">
+                Approve Template
+              </button>
+              <button (click)="selectedTemplate = null" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200">
+                Close Preview
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Rejection Modal -->
+      <div *ngIf="templateToReject" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <h3 class="text-sm font-black text-slate-900 uppercase">Reject Template</h3>
+            <button (click)="templateToReject = null" class="p-1 rounded-lg text-slate-400 hover:bg-slate-100">
+              <app-icon name="x" [size]="16"></app-icon>
+            </button>
+          </div>
+
+          <div>
+            <p class="text-xs text-slate-600 mb-2">Provide a reason for rejecting <strong>"{{ templateToReject.name }}"</strong>:</p>
+            <textarea [(ngModel)]="rejectionReason" rows="3" class="w-full border border-slate-200 rounded-xl p-3 text-xs text-slate-800 focus:outline-none focus:border-rose-500" placeholder="e.g. Contains promotional language in a transactional category."></textarea>
+          </div>
+
+          <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+            <button (click)="templateToReject = null" class="px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200">
+              Cancel
+            </button>
+            <button (click)="submitRejection()" class="px-3.5 py-1.5 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700">
+              Confirm Rejection
             </button>
           </div>
         </div>
@@ -158,14 +218,22 @@ import { EmailTemplate } from '../../models/alert21.models';
 export class EmailTemplatesComponent implements OnInit {
   dataService = inject(DataService);
   searchQuery = '';
+  statusFilter = 'ALL';
   selectedTemplate: EmailTemplate | null = null;
+  templateToReject: EmailTemplate | null = null;
+  rejectionReason = '';
 
   ngOnInit() {
     this.dataService.fetchEmailTemplates();
   }
 
+  countPending(): number {
+    return this.dataService.emailTemplates().filter(t => t.status === 'PENDING_REVIEW').length;
+  }
+
   filteredTemplates() {
     return this.dataService.emailTemplates().filter(t => {
+      if (this.statusFilter !== 'ALL' && t.status !== this.statusFilter) return false;
       const q = this.searchQuery.toLowerCase().trim();
       if (!q) return true;
       return t.name.toLowerCase().includes(q) || t.subject.toLowerCase().includes(q) || t.userName.toLowerCase().includes(q);
@@ -174,5 +242,28 @@ export class EmailTemplatesComponent implements OnInit {
 
   openPreview(t: EmailTemplate) {
     this.selectedTemplate = t;
+  }
+
+  async approve(t: EmailTemplate) {
+    try {
+      await this.dataService.approveEmailTemplate(t.id);
+    } catch (e) {
+      alert('Failed to approve template.');
+    }
+  }
+
+  openRejectModal(t: EmailTemplate) {
+    this.templateToReject = t;
+    this.rejectionReason = 'Content violates transactional email policy.';
+  }
+
+  async submitRejection() {
+    if (!this.templateToReject) return;
+    try {
+      await this.dataService.rejectEmailTemplate(this.templateToReject.id, this.rejectionReason);
+      this.templateToReject = null;
+    } catch (e) {
+      alert('Failed to reject template.');
+    }
   }
 }

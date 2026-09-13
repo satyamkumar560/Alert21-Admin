@@ -31,6 +31,7 @@ import {
   EmailTemplate,
   EmailTransaction,
   EmailPricingSlab,
+  EmailPackageMaster,
   EmailDashboardStats,
   WhatsappProviderConfig,
   WhatsappAccount,
@@ -83,6 +84,7 @@ export class DataService {
   emailTemplates = signal<EmailTemplate[]>([]);
   emailTransactions = signal<EmailTransaction[]>([]);
   emailPricingSlabs = signal<EmailPricingSlab[]>([]);
+  emailPackages = signal<EmailPackageMaster[]>([]);
   emailDashboardStats = signal<EmailDashboardStats | null>(null);
   emailBankTransfers = signal<any[]>([]);
 
@@ -135,6 +137,7 @@ export class DataService {
     this.fetchLiveBankTransfers();
     this.fetchMonitoringBankTransfers();
     this.fetchEmailBankTransfers();
+    this.fetchEmailPackages();
     this.fetchCompanyBankAccounts();
     this.fetchBillingDashboardStats();
     this.fetchPaymentSettings();
@@ -2936,6 +2939,42 @@ export class DataService {
     }
   }
 
+  async approveEmailTemplate(id: string) {
+    const headers = this.getAuthHeaders();
+    const url = `https://app.alert21.in/back/api/v1/admin/email/templates/${id}/approve`;
+    try {
+      const res = await firstValueFrom(this.http.post<any>(url, {}, { headers }));
+      await this.fetchEmailTemplates();
+      return res;
+    } catch (e) {
+      throw e;
+    }
+  }
+
+  async rejectEmailTemplate(id: string, reason: string) {
+    const headers = this.getAuthHeaders();
+    const url = `https://app.alert21.in/back/api/v1/admin/email/templates/${id}/reject`;
+    try {
+      const res = await firstValueFrom(this.http.post<any>(url, { reason }, { headers }));
+      await this.fetchEmailTemplates();
+      return res;
+    } catch (e) {
+      throw e;
+    }
+  }
+
+  async suspendEmailTemplate(id: string) {
+    const headers = this.getAuthHeaders();
+    const url = `https://app.alert21.in/back/api/v1/admin/email/templates/${id}/suspend`;
+    try {
+      const res = await firstValueFrom(this.http.post<any>(url, {}, { headers }));
+      await this.fetchEmailTemplates();
+      return res;
+    } catch (e) {
+      throw e;
+    }
+  }
+
   /**
    * GET /api/admin/email/logs
    */
@@ -3074,6 +3113,121 @@ export class DataService {
     } catch (e: any) {
       const msg = e?.error?.message || e?.message || 'Failed to save email pricing slab';
       this.toastService.showError('Slab Error', msg);
+    }
+    return false;
+  }
+
+  /**
+   * GET /api/admin/email/packages
+   */
+  async fetchEmailPackages() {
+    const headers = this.getAuthHeaders();
+    const urls = [
+      'https://app.alert21.in/back/api/admin/email/packages',
+      'https://app.alert21.in/back/api/v1/admin/email/packages'
+    ];
+
+    for (const url of urls) {
+      try {
+        const res = await firstValueFrom(
+          this.http.get<any>(url, { headers }).pipe(catchError(() => of(null)))
+        );
+        const list = Array.isArray(res?.data)
+          ? res.data
+          : (Array.isArray(res?.data?.items)
+              ? res.data.items
+              : (Array.isArray(res?.data?.packages)
+                  ? res.data.packages
+                  : (Array.isArray(res?.packages) ? res.packages : (Array.isArray(res) ? res : null))));
+
+        if (list && Array.isArray(list)) {
+          const mapped: EmailPackageMaster[] = list.map((pkg: any) => ({
+            id: pkg._id || pkg.id,
+            _id: pkg._id || pkg.id,
+            code: pkg.code,
+            name: pkg.name,
+            credits: pkg.credits ?? 0,
+            basePrice: pkg.base_price ?? pkg.basePrice ?? 0,
+            effectiveRate: pkg.effective_rate ?? (pkg.credits > 0 ? Number((pkg.base_price / pkg.credits).toFixed(4)) : 0),
+            gstPercent: pkg.gst_percent ?? pkg.gstPercent ?? 18,
+            validityDays: pkg.validity_days ?? pkg.validityDays ?? 180,
+            domainLimit: pkg.domain_limit ?? pkg.domainLimit ?? 1,
+            senderLimit: pkg.sender_limit ?? pkg.senderLimit ?? 2,
+            logRetentionDays: pkg.log_retention_days ?? pkg.logRetentionDays ?? 30,
+            active: pkg.active ?? true,
+            isFreeTrial: pkg.is_free_trial ?? pkg.isFreeTrial ?? false,
+            displayOrder: pkg.display_order ?? pkg.displayOrder ?? 0,
+            description: pkg.description,
+            createdAt: pkg.createdAt || pkg.created_at,
+            updatedAt: pkg.updatedAt || pkg.updated_at
+          }));
+          this.emailPackages.set(mapped);
+          break;
+        }
+      } catch (e) {}
+    }
+  }
+
+  /**
+   * POST/PUT /api/admin/email/packages
+   */
+  async saveEmailPackage(pkg: Partial<EmailPackageMaster>): Promise<boolean> {
+    const headers = this.getAuthHeaders();
+    const isEdit = !!(pkg.id || pkg._id);
+    const id = pkg.id || pkg._id;
+    const payload = {
+      code: pkg.code?.toUpperCase().trim(),
+      name: pkg.name?.trim(),
+      credits: Number(pkg.credits),
+      base_price: Number(pkg.basePrice),
+      gst_percent: Number(pkg.gstPercent ?? 18),
+      validity_days: Number(pkg.validityDays ?? 180),
+      domain_limit: Number(pkg.domainLimit ?? 1),
+      sender_limit: Number(pkg.senderLimit ?? 2),
+      log_retention_days: Number(pkg.logRetentionDays ?? 30),
+      active: pkg.active ?? true,
+      is_free_trial: pkg.isFreeTrial ?? false,
+      display_order: Number(pkg.displayOrder ?? 0),
+      description: pkg.description?.trim()
+    };
+
+    const url = isEdit
+      ? `https://app.alert21.in/back/api/admin/email/packages/${id}`
+      : `https://app.alert21.in/back/api/admin/email/packages`;
+
+    try {
+      const res = isEdit
+        ? await firstValueFrom(this.http.put<any>(url, payload, { headers }))
+        : await firstValueFrom(this.http.post<any>(url, payload, { headers }));
+
+      if (res && (res.success || res.data)) {
+        await this.fetchEmailPackages();
+        this.toastService.showSuccess('Package Saved', res.message || 'Email package saved successfully.');
+        return true;
+      }
+    } catch (e: any) {
+      const msg = e?.error?.message || e?.message || 'Failed to save email package';
+      this.toastService.showError('Package Error', msg);
+    }
+    return false;
+  }
+
+  /**
+   * DELETE /api/admin/email/packages/:id
+   */
+  async deleteEmailPackage(id: string): Promise<boolean> {
+    const headers = this.getAuthHeaders();
+    const url = `https://app.alert21.in/back/api/admin/email/packages/${id}`;
+    try {
+      const res = await firstValueFrom(this.http.delete<any>(url, { headers }));
+      if (res && res.success) {
+        await this.fetchEmailPackages();
+        this.toastService.showSuccess('Package Deleted', 'Email package removed successfully.');
+        return true;
+      }
+    } catch (e: any) {
+      const msg = e?.error?.message || e?.message || 'Failed to delete package';
+      this.toastService.showError('Delete Error', msg);
     }
     return false;
   }

@@ -379,14 +379,14 @@ export type NavTab =
               <span>Email Logs & Delivery</span>
             </button>
 
-            <!-- Email Pricing Slabs -->
+            <!-- Email Package Master -->
             <button
               type="button"
               (click)="onSelectTab('email-pricing')"
               [ngClass]="getNavClass('email-pricing')"
               class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all">
               <app-icon name="tag" [size]="15"></app-icon>
-              <span>Email Pricing Slabs</span>
+              <span>Email Package Master</span>
             </button>
 
             <!-- Bounce & Reputation -->
