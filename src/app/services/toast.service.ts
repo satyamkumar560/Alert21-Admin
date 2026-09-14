@@ -21,6 +21,14 @@ export class ToastService {
     this.addToast('error', title, message);
   }
 
+  success(message: string, title: string = 'Success') {
+    this.addToast('success', title, message);
+  }
+
+  error(message: string, title: string = 'Error') {
+    this.addToast('error', title, message);
+  }
+
   showWarning(title: string, message: string) {
     this.addToast('warning', title, message);
   }

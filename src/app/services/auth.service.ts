@@ -14,6 +14,10 @@ export class AuthService {
 
   authToken = signal<string | null>(localStorage.getItem('adminToken'));
 
+  getToken(): string | null {
+    return this.authToken() || localStorage.getItem('adminToken');
+  }
+
   currentAdmin = signal<AdminUser | null>(
     localStorage.getItem('adminUser') ? JSON.parse(localStorage.getItem('adminUser')!) : null
   );

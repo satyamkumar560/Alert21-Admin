@@ -6,6 +6,7 @@ import { SidebarComponent, NavTab } from './components/layout/sidebar.component'
 import { HeaderComponent } from './components/layout/header.component';
 import { DashboardComponent } from './components/dashboard/dashboard.component';
 import { UsersComponent } from './components/users/users.component';
+import { StaffComponent } from './components/staff/staff.component';
 import { DltApprovalsComponent } from './components/dlt/dlt-approvals.component';
 import { SenderIdsComponent } from './components/dlt/sender-ids.component';
 import { DltTemplatesComponent } from './components/dlt/dlt-templates.component';
@@ -74,6 +75,7 @@ import { ToastComponent } from './components/shared/toast.component';
     HeaderComponent,
     DashboardComponent,
     UsersComponent,
+    StaffComponent,
     SmsPricingComponent,
     BankTransfersComponent,
     BillingDashboardComponent,
@@ -156,6 +158,7 @@ import { ToastComponent } from './components/shared/toast.component';
           <main class="flex-1 mt-[70px] p-6 max-w-7xl w-full mx-auto">
             <app-dashboard *ngIf="activeTab === 'dashboard'" (navigate)="onTabChange($event)"></app-dashboard>
             <app-users *ngIf="activeTab === 'users'"></app-users>
+            <app-staff *ngIf="activeTab === 'staff'"></app-staff>
             <app-sms-pricing *ngIf="activeTab === 'sms-pricing'"></app-sms-pricing>
             <app-bank-transfers *ngIf="activeTab === 'bank-transfers'"></app-bank-transfers>
             <app-billing-dashboard *ngIf="activeTab === 'billing-dashboard'" (navigate)="onTabChange($event)"></app-billing-dashboard>
@@ -224,7 +227,7 @@ export class AppComponent implements OnInit {
   isSidebarOpen = true;
 
   private validTabs: NavTab[] = [
-    'dashboard', 'users', 'sms-pricing', 'bank-transfers', 'billing-dashboard',
+    'dashboard', 'users', 'staff', 'sms-pricing', 'bank-transfers', 'billing-dashboard',
     'monitoring-dashboard', 'monitoring-monitors', 'monitoring-incidents',
     'monitoring-plans', 'monitoring-subscriptions', 'monitoring-sources', 'monitoring-templates',
     'email-dashboard', 'email-providers', 'email-domains', 'email-senders',

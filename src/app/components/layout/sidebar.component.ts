@@ -7,6 +7,7 @@ import { RelayService } from '../../services/relay.service';
 export type NavTab =
   | 'dashboard'
   | 'users'
+  | 'staff'
   | 'sms-pricing'
   | 'bank-transfers'
   | 'billing-dashboard'
@@ -116,6 +117,17 @@ export type NavTab =
               <span class="ml-auto bg-slate-800 text-slate-400 text-[10px] px-2 py-0.5 rounded-full font-bold">
                 {{ dataService.users().length }}
               </span>
+            </button>
+
+            <!-- Staff & Access Control -->
+            <button
+              type="button"
+              (click)="onSelectTab('staff')"
+              [ngClass]="getNavClass('staff')"
+              class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all">
+              <app-icon name="shield" [size]="15"></app-icon>
+              <span>Staff & Access</span>
+              <span class="ml-auto bg-indigo-500/20 text-indigo-400 text-[9px] font-bold px-1.5 py-0.5 rounded border border-indigo-500/30">RBAC</span>
             </button>
           </div>
         </div>
