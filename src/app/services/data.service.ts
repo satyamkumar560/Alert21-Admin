@@ -101,29 +101,39 @@ export class DataService {
   whatsappPricingSlabs = signal<WhatsappPricingSlab[]>([]);
   whatsappBankTransfers = signal<WhatsappOrder[]>([]);
 
-  // Payment Settings (Manual Bank Transfer & Online Gateway controls)
+  // Payment Settings (Manual Bank Transfer, Razorpay & PayYantra controls)
   paymentSettings = signal<{
     allow_manual_payment: boolean;
     allow_gateway_payment: boolean;
+    allow_payyantra_payment: boolean;
     allow_whatsapp_manual_payment: boolean;
     allow_whatsapp_gateway_payment: boolean;
+    allow_whatsapp_payyantra_payment: boolean;
     allow_sms_manual_payment: boolean;
     allow_sms_gateway_payment: boolean;
+    allow_sms_payyantra_payment: boolean;
     allow_email_manual_payment: boolean;
     allow_email_gateway_payment: boolean;
+    allow_email_payyantra_payment: boolean;
     allow_monitoring_manual_payment: boolean;
     allow_monitoring_gateway_payment: boolean;
+    allow_monitoring_payyantra_payment: boolean;
   }>({
     allow_manual_payment: true,
     allow_gateway_payment: true,
+    allow_payyantra_payment: true,
     allow_whatsapp_manual_payment: true,
     allow_whatsapp_gateway_payment: true,
+    allow_whatsapp_payyantra_payment: true,
     allow_sms_manual_payment: true,
     allow_sms_gateway_payment: true,
+    allow_sms_payyantra_payment: true,
     allow_email_manual_payment: true,
     allow_email_gateway_payment: true,
+    allow_email_payyantra_payment: true,
     allow_monitoring_manual_payment: true,
-    allow_monitoring_gateway_payment: true
+    allow_monitoring_gateway_payment: true,
+    allow_monitoring_payyantra_payment: true,
   });
 
   constructor() {
@@ -1109,14 +1119,19 @@ export class DataService {
         this.paymentSettings.set({
           allow_manual_payment: data.allow_manual_payment !== false,
           allow_gateway_payment: data.allow_gateway_payment !== false,
+          allow_payyantra_payment: data.allow_payyantra_payment !== false,
           allow_whatsapp_manual_payment: data.allow_whatsapp_manual_payment !== false,
           allow_whatsapp_gateway_payment: data.allow_whatsapp_gateway_payment !== false,
+          allow_whatsapp_payyantra_payment: data.allow_whatsapp_payyantra_payment !== false,
           allow_sms_manual_payment: data.allow_sms_manual_payment !== false,
           allow_sms_gateway_payment: data.allow_sms_gateway_payment !== false,
+          allow_sms_payyantra_payment: data.allow_sms_payyantra_payment !== false,
           allow_email_manual_payment: data.allow_email_manual_payment !== false,
           allow_email_gateway_payment: data.allow_email_gateway_payment !== false,
+          allow_email_payyantra_payment: data.allow_email_payyantra_payment !== false,
           allow_monitoring_manual_payment: data.allow_monitoring_manual_payment !== false,
-          allow_monitoring_gateway_payment: data.allow_monitoring_gateway_payment !== false
+          allow_monitoring_gateway_payment: data.allow_monitoring_gateway_payment !== false,
+          allow_monitoring_payyantra_payment: data.allow_monitoring_payyantra_payment !== false,
         });
         return data;
       }
@@ -1132,14 +1147,19 @@ export class DataService {
   async updatePaymentSettings(settings: Partial<{
     allow_manual_payment: boolean;
     allow_gateway_payment: boolean;
+    allow_payyantra_payment: boolean;
     allow_whatsapp_manual_payment: boolean;
     allow_whatsapp_gateway_payment: boolean;
+    allow_whatsapp_payyantra_payment: boolean;
     allow_sms_manual_payment: boolean;
     allow_sms_gateway_payment: boolean;
+    allow_sms_payyantra_payment: boolean;
     allow_email_manual_payment: boolean;
     allow_email_gateway_payment: boolean;
+    allow_email_payyantra_payment: boolean;
     allow_monitoring_manual_payment: boolean;
     allow_monitoring_gateway_payment: boolean;
+    allow_monitoring_payyantra_payment: boolean;
   }>): Promise<boolean> {
     try {
       const token = this.authService.authToken();
@@ -1156,7 +1176,7 @@ export class DataService {
           ...curr,
           ...data
         }));
-        this.toastService.showSuccess('Settings Updated', 'Manual payment permissions updated successfully.');
+        this.toastService.showSuccess('Settings Updated', 'Payment settings updated successfully.');
         return true;
       }
     } catch (e: any) {

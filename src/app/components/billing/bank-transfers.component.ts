@@ -27,8 +27,8 @@ import { IconComponent } from '../shared/icon.component';
         </button>
       </div>
 
-      <!-- Payment Channels Master Controls: Manual Bank Transfer & Online Gateway -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <!-- Payment Channels Master Controls: Manual Bank Transfer, Razorpay & PayYantra -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <!-- 1. Manual Bank Transfer Switch -->
         <div class="bg-white border rounded-2xl p-4 sm:p-5 shadow-sm transition-all flex flex-col justify-between"
           [ngClass]="dataService.paymentSettings().allow_manual_payment ? 'border-emerald-200 bg-emerald-50/20' : 'border-amber-200 bg-amber-50/30'">
@@ -101,6 +101,44 @@ import { IconComponent } from '../shared/icon.component';
                 : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-600/20'">
               <app-icon [name]="dataService.paymentSettings().allow_gateway_payment ? 'x' : 'check'" [size]="14"></app-icon>
               <span>{{ dataService.paymentSettings().allow_gateway_payment ? 'Disable Online Gateway Option' : 'Enable Online Gateway Option' }}</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 3. PayYantra Payment Gateway (Scriza) Switch -->
+        <div class="bg-white border rounded-2xl p-4 sm:p-5 shadow-sm transition-all flex flex-col justify-between"
+          [ngClass]="dataService.paymentSettings().allow_payyantra_payment ? 'border-purple-200 bg-purple-50/20' : 'border-rose-200 bg-rose-50/30'">
+          <div class="flex items-start sm:items-center gap-3.5 mb-4">
+            <div class="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 shadow-sm"
+              [ngClass]="dataService.paymentSettings().allow_payyantra_payment ? 'bg-purple-600 text-white shadow-purple-600/20' : 'bg-rose-500 text-white shadow-rose-500/20'">
+              <app-icon [name]="dataService.paymentSettings().allow_payyantra_payment ? 'shield' : 'x-circle'" [size]="22"></app-icon>
+            </div>
+            <div>
+              <div class="flex items-center gap-2 flex-wrap">
+                <h3 class="text-sm font-extrabold text-slate-900">PayYantra Gateway (Scriza)</h3>
+                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider"
+                  [ngClass]="dataService.paymentSettings().allow_payyantra_payment ? 'bg-purple-100 text-purple-800' : 'bg-rose-100 text-rose-800'">
+                  {{ dataService.paymentSettings().allow_payyantra_payment ? 'Enabled for Users' : 'Disabled for Users' }}
+                </span>
+              </div>
+              <p class="text-xs text-slate-500 mt-1">
+                {{ dataService.paymentSettings().allow_payyantra_payment 
+                  ? 'Users can pay with PayYantra Payin service across SMS, WhatsApp, Email & Monitoring.' 
+                  : 'PayYantra Gateway is HIDDEN from all billing pages.' }}
+              </p>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-end">
+            <button
+              (click)="togglePaymentSetting('allow_payyantra_payment')"
+              [disabled]="isTogglingManualPayment"
+              class="px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-sm disabled:opacity-50"
+              [ngClass]="dataService.paymentSettings().allow_payyantra_payment 
+                ? 'bg-rose-600 hover:bg-rose-700 text-white shadow-rose-600/20' 
+                : 'bg-purple-600 hover:bg-purple-700 text-white shadow-purple-600/20'">
+              <app-icon [name]="dataService.paymentSettings().allow_payyantra_payment ? 'x' : 'check'" [size]="14"></app-icon>
+              <span>{{ dataService.paymentSettings().allow_payyantra_payment ? 'Disable PayYantra Option' : 'Enable PayYantra Option' }}</span>
             </button>
           </div>
         </div>
@@ -852,7 +890,7 @@ export class BankTransfersComponent implements OnInit, OnDestroy {
     this.dataService.fetchCompanyBankAccounts();
   }
 
-  async togglePaymentSetting(field: 'allow_manual_payment' | 'allow_gateway_payment' | 'allow_whatsapp_manual_payment' | 'allow_whatsapp_gateway_payment' | 'allow_sms_manual_payment' | 'allow_sms_gateway_payment' | 'allow_email_manual_payment' | 'allow_email_gateway_payment' | 'allow_monitoring_manual_payment' | 'allow_monitoring_gateway_payment') {
+  async togglePaymentSetting(field: 'allow_manual_payment' | 'allow_gateway_payment' | 'allow_payyantra_payment' | 'allow_whatsapp_manual_payment' | 'allow_whatsapp_gateway_payment' | 'allow_whatsapp_payyantra_payment' | 'allow_sms_manual_payment' | 'allow_sms_gateway_payment' | 'allow_sms_payyantra_payment' | 'allow_email_manual_payment' | 'allow_email_gateway_payment' | 'allow_email_payyantra_payment' | 'allow_monitoring_manual_payment' | 'allow_monitoring_gateway_payment' | 'allow_monitoring_payyantra_payment') {
     const current = this.dataService.paymentSettings();
     const newVal = !current[field];
     this.isTogglingManualPayment = true;
