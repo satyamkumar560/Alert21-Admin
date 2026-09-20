@@ -74,17 +74,18 @@ deploy_angular:
         echo "$SSH_PRIVATE_KEY" | base64 -d > ~/.ssh/id_rsa
       fi
     - chmod 600 ~/.ssh/id_rsa
+    - echo "" >> ~/.ssh/id_rsa
     - ssh-keyscan -H -p "$SSH_PORT" "$SERVER_IP" >> ~/.ssh/known_hosts || true
 
   script:
 
     # Upload build
     - echo "Uploading Angular build..."
-    - scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -P "$SSH_PORT" dist.tar.gz "$SSH_USER@$SERVER_IP:/tmp/"
+    - scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PubkeyAcceptedKeyTypes=+ssh-rsa -o HostKeyAlgorithms=+ssh-rsa -P "$SSH_PORT" dist.tar.gz "$SSH_USER@$SERVER_IP:/tmp/"
 
     # Deploy and restart PM2
     - |
-      ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p "$SSH_PORT" "$SSH_USER@$SERVER_IP" <<EOF
+      ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PubkeyAcceptedKeyTypes=+ssh-rsa -o HostKeyAlgorithms=+ssh-rsa -p "$SSH_PORT" "$SSH_USER@$SERVER_IP" <<EOF
 
       set -e
 
