@@ -45,6 +45,9 @@ export type NavTab =
   | 'relay-events'
   | 'relay-packages'
   | 'relay-diagnostics'
+  | 'variables-categories'
+  | 'variables-master'
+  | 'variables-usage'
   | 'dlt-pe'
   | 'dlt-sender'
   | 'dlt-template'
@@ -53,6 +56,8 @@ export type NavTab =
   | 'dlt-hash-tool'
   | 'sms-logs'
   | 'audit-logs'
+  | 'developer-observability'
+  | 'admin-push-infrastructure'
   | 'settings';
 
 @Component({
@@ -671,6 +676,60 @@ export type NavTab =
           </div>
         </div>
 
+        <!-- VARIABLE MASTER ENGINE DROPDOWN [NEW] -->
+        <div>
+          <button
+            type="button"
+            (click)="toggleSection('variables')"
+            class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl bg-violet-500/10 hover:bg-violet-500/20 border border-violet-500/25 text-violet-300 transition-all cursor-pointer shadow-sm">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-violet-400 shadow-md shadow-violet-400/80 animate-pulse"></span>
+              <span class="text-xs font-black uppercase tracking-wider text-violet-200">Variable Master Engine</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span class="bg-violet-500/20 text-violet-300 text-[9px] font-bold px-1.5 py-0.5 rounded border border-violet-500/30">TAXONOMY</span>
+              <svg
+                class="w-4 h-4 text-violet-300 transition-transform duration-200"
+                [ngClass]="isVariablesOpen() ? 'rotate-180' : 'rotate-0'"
+                fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </button>
+
+          <div *ngIf="isVariablesOpen()" class="mt-1.5 ml-2.5 pl-2.5 border-l-2 border-violet-500/30 space-y-1 transition-all">
+            <!-- Categories -->
+            <button
+              type="button"
+              (click)="onSelectTab('variables-categories')"
+              [ngClass]="getNavClass('variables-categories')"
+              class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all">
+              <app-icon name="layers" [size]="15"></app-icon>
+              <span>Categories</span>
+            </button>
+
+            <!-- Variable Master -->
+            <button
+              type="button"
+              (click)="onSelectTab('variables-master')"
+              [ngClass]="getNavClass('variables-master')"
+              class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all">
+              <app-icon name="sliders" [size]="15"></app-icon>
+              <span>Variable Master</span>
+            </button>
+
+            <!-- Usage Report -->
+            <button
+              type="button"
+              (click)="onSelectTab('variables-usage')"
+              [ngClass]="getNavClass('variables-usage')"
+              class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all">
+              <app-icon name="activity" [size]="15"></app-icon>
+              <span>Usage & Audit Logs</span>
+            </button>
+          </div>
+        </div>
+
         <!-- 7. DLT COMPLIANCE DROPDOWN -->
         <div>
           <button
@@ -800,6 +859,26 @@ export type NavTab =
               <span>Admin Audit Logs</span>
             </button>
 
+            <!-- Developer Observability -->
+            <button
+              type="button"
+              (click)="onSelectTab('developer-observability')"
+              [ngClass]="getNavClass('developer-observability')"
+              class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all">
+              <app-icon name="code" [size]="15"></app-icon>
+              <span>Developer Observability</span>
+            </button>
+
+            <!-- Push Infrastructure v2 -->
+            <button
+              type="button"
+              (click)="onSelectTab('admin-push-infrastructure')"
+              [ngClass]="getNavClass('admin-push-infrastructure')"
+              class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all">
+              <app-icon name="bell" [size]="15"></app-icon>
+              <span>Push Infrastructure</span>
+            </button>
+
             <!-- Settings -->
             <button
               type="button"
@@ -866,8 +945,9 @@ export class SidebarComponent {
   isRelayOpen = signal<boolean>(false);
   isDltOpen = signal<boolean>(false);
   isGatewaysOpen = signal<boolean>(false);
+  isVariablesOpen = signal<boolean>(false);
 
-  toggleSection(section: 'core' | 'billing' | 'monitoring' | 'email' | 'whatsapp' | 'relay' | 'dlt' | 'gateways') {
+  toggleSection(section: 'core' | 'billing' | 'monitoring' | 'email' | 'whatsapp' | 'relay' | 'dlt' | 'gateways' | 'variables') {
     switch (section) {
       case 'core':
         this.isCoreOpen.update(v => !v);
@@ -892,6 +972,9 @@ export class SidebarComponent {
         break;
       case 'gateways':
         this.isGatewaysOpen.update(v => !v);
+        break;
+      case 'variables':
+        this.isVariablesOpen.update(v => !v);
         break;
     }
   }

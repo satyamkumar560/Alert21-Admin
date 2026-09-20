@@ -63,6 +63,14 @@ import { RelayPackagesComponent } from './components/relay/relay-packages.compon
 import { RelayDiagnosticsComponent } from './components/relay/relay-diagnostics.component';
 import { RelayOutboundSmsComponent } from './components/relay/relay-outbound-sms.component';
 
+// Variable Master & Universal Template Engine (Spec 20 Sep 2026)
+import { VariableCategoriesComponent } from './components/variables/variable-categories.component';
+import { VariableMasterComponent } from './components/variables/variable-master.component';
+import { VariableUsageComponent } from './components/variables/variable-usage.component';
+import { DeveloperLogsAdminComponent } from './components/logs/developer-logs-admin.component';
+import { AdminPushDashboardComponent } from './components/push/admin-push-dashboard.component';
+
+
 import { ToastComponent } from './components/shared/toast.component';
 
 @Component({
@@ -113,6 +121,11 @@ import { ToastComponent } from './components/shared/toast.component';
     RelayPackagesComponent,
     RelayDiagnosticsComponent,
     RelayOutboundSmsComponent,
+    VariableCategoriesComponent,
+    VariableMasterComponent,
+    VariableUsageComponent,
+    DeveloperLogsAdminComponent,
+    AdminPushDashboardComponent,
     DltApprovalsComponent,
     SenderIdsComponent,
     DltTemplatesComponent,
@@ -205,6 +218,13 @@ import { ToastComponent } from './components/shared/toast.component';
             <app-relay-diagnostics *ngIf="activeTab === 'relay-diagnostics'" (navigate)="onTabChange($event)"></app-relay-diagnostics>
             <app-relay-outbound-sms *ngIf="activeTab === 'relay-outbound'"></app-relay-outbound-sms>
 
+            <!-- Variable Master & Universal Template Engine Components -->
+            <app-variable-categories *ngIf="activeTab === 'variables-categories'"></app-variable-categories>
+            <app-variable-master *ngIf="activeTab === 'variables-master'"></app-variable-master>
+            <app-variable-usage *ngIf="activeTab === 'variables-usage'"></app-variable-usage>
+            <app-developer-logs-admin *ngIf="activeTab === 'developer-observability'"></app-developer-logs-admin>
+            <app-admin-push-dashboard *ngIf="activeTab === 'admin-push-infrastructure'"></app-admin-push-dashboard>
+
             <!-- DLT & Gateway Components -->
             <app-dlt-approvals *ngIf="activeTab === 'dlt-pe'"></app-dlt-approvals>
             <app-sender-ids *ngIf="activeTab === 'dlt-sender'"></app-sender-ids>
@@ -222,6 +242,7 @@ import { ToastComponent } from './components/shared/toast.component';
   `
 })
 export class AppComponent implements OnInit {
+  title = 'admin-alert21';
   authService = inject(AuthService);
   activeTab: NavTab = 'dashboard';
   isSidebarOpen = true;
@@ -236,6 +257,7 @@ export class AppComponent implements OnInit {
     'whatsapp-templates', 'whatsapp-campaigns', 'whatsapp-logs', 'whatsapp-webhook-logs', 'whatsapp-pricing',
     'relay-dashboard', 'relay-builder', 'relay-templates', 'relay-sources', 'relay-variables', 'relay-devices',
     'relay-events', 'relay-packages', 'relay-diagnostics', 'relay-outbound',
+    'variables-categories', 'variables-master', 'variables-usage', 'developer-observability', 'admin-push-infrastructure',
     'dlt-pe', 'dlt-sender', 'dlt-template', 'providers', 'provider-routing',
     'dlt-hash-tool', 'sms-logs', 'audit-logs', 'settings'
   ];

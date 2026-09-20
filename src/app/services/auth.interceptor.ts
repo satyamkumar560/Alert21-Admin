@@ -11,9 +11,18 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);
   const toastService = inject(ToastService);
 
+  const token = authService.getToken();
+  let authReq = req;
+
+  if (token && !req.headers.has('Authorization')) {
+    authReq = req.clone({
+      headers: req.headers.set('Authorization', `Bearer ${token}`)
+    });
+  }
+
   const isAuthRequest = req.url.includes('/login') || req.url.includes('/auth');
 
-  return next(req).pipe(
+  return next(authReq).pipe(
     tap((event) => {
       if (event instanceof HttpResponse && event.body) {
         const body = event.body as any;
