@@ -104,6 +104,15 @@ import { IconComponent } from '../shared/icon.component';
                 </td>
                 <td class="text-right">
                   <div class="flex items-center justify-end gap-2 whitespace-nowrap">
+                    <!-- View Account (Impersonate Read-Only Mode) -->
+                    <button 
+                      (click)="viewAsUser(user)" 
+                      title="View User Portal Modules (Read-Only Mode)" 
+                      class="px-3 py-1.5 rounded-lg text-[11px] font-extrabold bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-xs flex items-center gap-1.5 transition-all">
+                      <app-icon name="eye" [size]="13"></app-icon>
+                      <span>View Account</span>
+                    </button>
+
                     <!-- SMS Balance & Ledger Button -->
                     <button 
                       (click)="openBalanceModal(user)" 
@@ -693,5 +702,15 @@ export class UsersComponent implements OnInit {
     const adminName = this.authService.currentAdmin()?.name || 'Admin';
     this.dataService.assignUserProvider(user.id, providerId || undefined, adminName);
     this.closeAssignProvider();
+  }
+
+  async viewAsUser(user: AlertUser) {
+    const res = await this.dataService.impersonateUser(user.id);
+    if (res.success && res.token) {
+      const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      const portalBase = isLocal ? 'http://localhost:4200' : 'https://app.alert21.in';
+      const targetUrl = `${portalBase}/#/impersonate?token=${res.token}`;
+      window.open(targetUrl, '_blank');
+    }
   }
 }

@@ -68,6 +68,9 @@ export class RelayService {
   outboundPagination = signal<{ total: number; page: number; limit: number; pages: number }>({ total: 0, page: 1, limit: 50, pages: 1 });
   userLimits = signal<RelayUserLimit[]>([]);
 
+  // Global Admin Webhooks
+  webhooks = signal<any[]>([]);
+
   isLoading = signal<boolean>(false);
 
   private isFetching = false;
@@ -890,6 +893,48 @@ export class RelayService {
       }
     } catch (err: any) {
       this.toastService.showError('Error', err?.error?.message || 'Failed to update user limits.');
+    }
+  }
+
+  async fetchGlobalWebhooks() {
+    const token = this.authService.authToken();
+    if (!token) return;
+    try {
+      const headers = this.getAuthHeaders();
+      const res = await firstValueFrom(this.http.get<any>(`${this.baseUrl}/webhooks`, { headers }));
+      if (res && res.success && Array.isArray(res.data)) {
+        this.webhooks.set(res.data);
+      }
+    } catch (e) {
+      console.error('Fetch global webhooks error:', e);
+    }
+  }
+
+  async createGlobalWebhook(url: string, description?: string) {
+    try {
+      const headers = this.getAuthHeaders();
+      const res = await firstValueFrom(this.http.post<any>(`${this.baseUrl}/webhooks`, { url, description }, { headers }));
+      if (res && res.success) {
+        this.webhooks.update(list => [res.data, ...list]);
+        this.toastService.showSuccess('Webhook Created', 'Global system webhook added successfully.');
+        return res.data;
+      }
+    } catch (err: any) {
+      this.toastService.showError('Error', err?.error?.message || 'Failed to create global webhook.');
+    }
+    return null;
+  }
+
+  async deleteGlobalWebhook(id: string) {
+    try {
+      const headers = this.getAuthHeaders();
+      const res = await firstValueFrom(this.http.delete<any>(`${this.baseUrl}/webhooks/${id}`, { headers }));
+      if (res && res.success) {
+        this.webhooks.update(list => list.filter(w => (w._id || w.id) !== id));
+        this.toastService.showSuccess('Webhook Deleted', 'Global webhook removed.');
+      }
+    } catch (err: any) {
+      this.toastService.showError('Error', err?.error?.message || 'Failed to delete global webhook.');
     }
   }
 }

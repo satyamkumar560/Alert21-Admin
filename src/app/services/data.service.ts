@@ -670,6 +670,40 @@ export class DataService {
     return false;
   }
 
+  async impersonateUser(userId: string): Promise<{ success: boolean; token?: string }> {
+    try {
+      const token = this.authService.authToken();
+      const headers = new HttpHeaders({
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      });
+
+      const urls = [
+        `https://app.alert21.in/back/api/admin/users/${userId}/impersonate`,
+        `http://localhost:5000/api/admin/users/${userId}/impersonate`
+      ];
+
+      for (const url of urls) {
+        try {
+          const res = await firstValueFrom(this.http.post<any>(url, {}, { headers }));
+          if (res && res.success && res.data?.token) {
+            this.toastService.showSuccess('Impersonation Ready', 'Opening User Portal in View-Only mode...');
+            return {
+              success: true,
+              token: res.data.token
+            };
+          }
+        } catch (e) {
+          // Try next endpoint fallback
+        }
+      }
+    } catch (err: any) {
+      console.error('Impersonate user error:', err);
+      this.toastService.showError('Impersonation Error', 'Failed to generate view-only session.');
+    }
+    return { success: false };
+  }
+
   assignUserProvider(userId: string, providerId: string | undefined, adminName: string) {
     this.users.update(list => list.map(u => u.id === userId ? { ...u, assignedProviderId: providerId } : u));
   }
