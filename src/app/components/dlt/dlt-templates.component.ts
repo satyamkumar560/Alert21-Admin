@@ -117,6 +117,13 @@ import { IconComponent } from '../shared/icon.component';
                 <td class="text-right">
                   <div class="flex items-center justify-end gap-2">
                     <button 
+                      (click)="openEditModal(tpl)" 
+                      title="Edit DLT Template Details" 
+                      class="px-2.5 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs flex items-center gap-1.5 border border-indigo-200 shadow-xs transition-all cursor-pointer">
+                      <app-icon name="edit" [size]="13"></app-icon>
+                      <span>Edit</span>
+                    </button>
+                    <button 
                       (click)="openReviewModal(tpl)" 
                       title="Update Template Status" 
                       class="btn btn-outline btn-sm font-semibold text-xs">
@@ -133,6 +140,100 @@ import { IconComponent } from '../shared/icon.component';
               </tr>
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <!-- Edit Template Modal -->
+      <div *ngIf="editingTemplate" class="modal-backdrop" (click)="closeEditModal()">
+        <div class="modal-card p-6 border border-slate-200 bg-white rounded-2xl shadow-2xl max-w-lg w-full" (click)="$event.stopPropagation()">
+          <div class="pb-4 border-b border-slate-100 flex items-center justify-between">
+            <div>
+              <h3 class="text-lg font-extrabold text-slate-900">Edit DLT Content Template</h3>
+              <p class="text-xs text-slate-500 font-medium">Modify template details, content, category, and approval status.</p>
+            </div>
+            <button (click)="closeEditModal()" class="btn btn-outline btn-sm">Close</button>
+          </div>
+
+          <div class="py-4 space-y-4 text-xs">
+            <div class="form-group">
+              <label class="form-label font-bold text-slate-700 mb-1">Template Name *</label>
+              <input 
+                type="text" 
+                [(ngModel)]="editForm.templateName" 
+                placeholder="e.g. password_has_been_changed" 
+                class="form-control text-xs font-semibold">
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div class="form-group">
+                <label class="form-label font-bold text-slate-700 mb-1">DLT Template ID *</label>
+                <input 
+                  type="text" 
+                  [(ngModel)]="editForm.templateId" 
+                  placeholder="e.g. 1207176837469017312" 
+                  class="form-control text-xs font-mono font-bold">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label font-bold text-slate-700 mb-1">Category / Type *</label>
+                <select [(ngModel)]="editForm.templateType" class="form-control text-xs font-semibold">
+                  <option value="TRANSACTIONAL">TRANSACTIONAL</option>
+                  <option value="SERVICE_IMPLICIT">SERVICE_IMPLICIT</option>
+                  <option value="SERVICE_EXPLICIT">SERVICE_EXPLICIT</option>
+                  <option value="PROMOTIONAL">PROMOTIONAL</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label font-bold text-slate-700 mb-1">Registered Content Template *</label>
+              <textarea 
+                [(ngModel)]="editForm.templateContent" 
+                rows="4" 
+                placeholder="Registered DLT text template with {#var#} variables..." 
+                class="form-control text-xs font-mono leading-normal"></textarea>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div class="form-group">
+                <label class="form-label font-bold text-slate-700 mb-1">Status *</label>
+                <select [(ngModel)]="editForm.status" class="form-control text-xs font-semibold">
+                  <option value="ACTIVE">ACTIVE</option>
+                  <option value="PENDING">PENDING</option>
+                  <option value="REJECTED">REJECTED</option>
+                  <option value="SUSPENDED">SUSPENDED</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label font-bold text-slate-700 mb-1">User Owner</label>
+                <input 
+                  type="text" 
+                  [value]="editingTemplate.userName" 
+                  disabled 
+                  class="form-control text-xs bg-slate-100 text-slate-500 font-medium">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label font-bold text-slate-700 mb-1">Admin Verification Remarks</label>
+              <textarea 
+                [(ngModel)]="editForm.adminRemarks" 
+                placeholder="Enter admin verification remarks..." 
+                class="form-control text-xs"></textarea>
+            </div>
+          </div>
+
+          <div class="pt-4 border-t border-slate-100 flex items-center justify-between">
+            <button (click)="closeEditModal()" class="btn btn-outline btn-sm">Cancel</button>
+            <button 
+              [disabled]="isSavingEdit"
+              (click)="saveEditAction()" 
+              class="btn btn-primary btn-sm">
+              <span *ngIf="isSavingEdit" class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+              <span>{{ isSavingEdit ? 'Saving Changes...' : 'Save Template Changes' }}</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -207,6 +308,17 @@ export class DltTemplatesComponent implements OnInit {
   adminRemarks = '';
   isUpdating = false;
 
+  editingTemplate: ContentTemplate | null = null;
+  editForm = {
+    templateName: '',
+    templateId: '',
+    templateType: 'TRANSACTIONAL' as 'SERVICE_IMPLICIT' | 'SERVICE_EXPLICIT' | 'TRANSACTIONAL' | 'PROMOTIONAL',
+    templateContent: '',
+    status: 'ACTIVE' as DltStatus,
+    adminRemarks: ''
+  };
+  isSavingEdit = false;
+
   async ngOnInit() {
     await this.dataService.fetchLiveTemplates();
   }
@@ -234,6 +346,44 @@ export class DltTemplatesComponent implements OnInit {
       case 'SUSPENDED': return 'badge badge-suspended';
       default: return 'badge badge-suspended';
     }
+  }
+
+  openEditModal(template: ContentTemplate) {
+    this.editingTemplate = template;
+    this.editForm = {
+      templateName: template.templateName,
+      templateId: template.templateId,
+      templateType: template.templateType || 'TRANSACTIONAL',
+      templateContent: template.templateContent,
+      status: template.status || 'ACTIVE',
+      adminRemarks: template.adminRemarks || ''
+    };
+  }
+
+  closeEditModal() {
+    this.editingTemplate = null;
+    this.isSavingEdit = false;
+  }
+
+  async saveEditAction() {
+    if (!this.editingTemplate) return;
+    this.isSavingEdit = true;
+    const adminName = this.authService.currentAdmin()?.name || 'Admin';
+
+    await this.dataService.updateLiveTemplateDetails(
+      this.editingTemplate.id,
+      {
+        templateName: this.editForm.templateName,
+        templateId: this.editForm.templateId,
+        templateType: this.editForm.templateType,
+        templateContent: this.editForm.templateContent,
+        status: this.editForm.status,
+        adminRemarks: this.editForm.adminRemarks
+      },
+      adminName
+    );
+
+    this.closeEditModal();
   }
 
   openReviewModal(template: ContentTemplate) {

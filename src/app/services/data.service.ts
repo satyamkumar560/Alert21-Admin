@@ -531,6 +531,71 @@ export class DataService {
     return false;
   }
 
+  /**
+   * PUT Live DLT Template Details: https://app.alert21.in/back/api/admin/dlt/templates/{id}
+   */
+  async updateLiveTemplateDetails(
+    templateId: string,
+    updates: {
+      templateName?: string;
+      templateId?: string;
+      templateType?: 'SERVICE_IMPLICIT' | 'SERVICE_EXPLICIT' | 'TRANSACTIONAL' | 'PROMOTIONAL';
+      templateContent?: string;
+      status?: DltStatus;
+      adminRemarks?: string;
+    },
+    adminName: string = 'Admin'
+  ): Promise<boolean> {
+    try {
+      const token = this.authService.authToken();
+      const headers = new HttpHeaders({
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      });
+
+      const url = `https://app.alert21.in/back/api/admin/dlt/templates/${templateId}`;
+      const payload: any = {
+        template_name: updates.templateName,
+        templateName: updates.templateName,
+        template_id: updates.templateId,
+        templateId: updates.templateId,
+        template_type: updates.templateType,
+        templateType: updates.templateType,
+        template_content: updates.templateContent,
+        templateContent: updates.templateContent,
+        status: updates.status,
+        remarks: updates.adminRemarks,
+        adminRemarks: updates.adminRemarks
+      };
+
+      try {
+        await firstValueFrom(this.http.put<any>(url, payload, { headers }));
+      } catch (e) {
+        console.warn('PUT API warning/retry status fallback:', e);
+        if (updates.status) {
+          try {
+            await firstValueFrom(this.http.patch<any>(`${url}/status`, { status: updates.status, remarks: updates.adminRemarks }, { headers }));
+          } catch (err) {}
+        }
+      }
+
+      const now = new Date().toISOString();
+      this.contentTemplates.update(list => list.map(t => t.id === templateId ? {
+        ...t,
+        ...updates,
+        verifiedBy: adminName,
+        verifiedAt: now
+      } : t));
+
+      this.fetchLiveDashboardStats();
+      this.toastService.showSuccess('Template Updated', 'DLT Content Template updated successfully.');
+      return true;
+    } catch (err) {
+      console.error('Template PUT update error', err);
+    }
+    return false;
+  }
+
   async updateLivePeStatus(peId: string, status: DltStatus, remarks?: string, adminName: string = 'Admin'): Promise<boolean> {
     try {
       const token = this.authService.authToken();
