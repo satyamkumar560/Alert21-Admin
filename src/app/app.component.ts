@@ -69,6 +69,8 @@ import { VariableMasterComponent } from './components/variables/variable-master.
 import { VariableUsageComponent } from './components/variables/variable-usage.component';
 import { DeveloperLogsAdminComponent } from './components/logs/developer-logs-admin.component';
 import { AdminPushDashboardComponent } from './components/push/admin-push-dashboard.component';
+import { SecurityManagementComponent } from './components/security/security-management.component';
+import { RazorpayPaymentsComponent } from './components/billing/razorpay-payments.component';
 
 
 import { ToastComponent } from './components/shared/toast.component';
@@ -87,6 +89,8 @@ import { ToastComponent } from './components/shared/toast.component';
     SmsPricingComponent,
     BankTransfersComponent,
     BillingDashboardComponent,
+    SecurityManagementComponent,
+    RazorpayPaymentsComponent,
     MonitoringDashboardComponent,
     MonitoringAllMonitorsComponent,
     MonitoringIncidentsComponent,
@@ -175,6 +179,8 @@ import { ToastComponent } from './components/shared/toast.component';
             <app-sms-pricing *ngIf="activeTab === 'sms-pricing'"></app-sms-pricing>
             <app-bank-transfers *ngIf="activeTab === 'bank-transfers'"></app-bank-transfers>
             <app-billing-dashboard *ngIf="activeTab === 'billing-dashboard'" (navigate)="onTabChange($event)"></app-billing-dashboard>
+            <app-security-management *ngIf="activeTab === 'signup-security'"></app-security-management>
+            <app-razorpay-payments *ngIf="activeTab === 'razorpay-payments'"></app-razorpay-payments>
             
             <!-- Website Monitoring Components -->
             <app-monitoring-dashboard *ngIf="activeTab === 'monitoring-dashboard'"></app-monitoring-dashboard>
@@ -249,6 +255,7 @@ export class AppComponent implements OnInit {
 
   private validTabs: NavTab[] = [
     'dashboard', 'users', 'staff', 'sms-pricing', 'bank-transfers', 'billing-dashboard',
+    'signup-security', 'razorpay-payments',
     'monitoring-dashboard', 'monitoring-monitors', 'monitoring-incidents',
     'monitoring-plans', 'monitoring-subscriptions', 'monitoring-sources', 'monitoring-templates',
     'email-dashboard', 'email-providers', 'email-domains', 'email-senders',

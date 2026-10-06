@@ -116,4 +116,12 @@ export class AuthService {
   canApproveDlt(): boolean {
     return true;
   }
+
+  getAuthHeaders(): HttpHeaders {
+    const token = this.getToken() || '';
+    return new HttpHeaders({
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    });
+  }
 }

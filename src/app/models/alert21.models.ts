@@ -10,7 +10,7 @@ export interface AdminUser {
   lastLogin: string;
 }
 
-export type UserStatus = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'BLOCKED';
+export type UserStatus = 'PENDING_CAPTCHA' | 'PENDING_EMAIL' | 'PENDING_MOBILE' | 'UNDER_REVIEW' | 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'BLOCKED';
 
 export interface AlertUser {
   id: string;
@@ -1205,6 +1205,45 @@ export interface RelayUserLimit {
   today_sent_count: number;
   month_sent_count: number;
   last_reset_date?: string;
+}
+
+export interface SignupSecurityTelemetry {
+  _id?: string;
+  id?: string;
+  userId?: {
+    _id?: string;
+    id?: string;
+    accountId?: string;
+    name?: string;
+    company?: string;
+    email?: string;
+    mobile?: string;
+    status?: UserStatus;
+  };
+  ipAddress: string;
+  deviceHash: string;
+  userAgent?: string;
+  riskScore: number;
+  riskFlags: string[];
+  captchaVerified: boolean;
+  captchaScore?: number;
+  emailOtpVerified: boolean;
+  emailOtpAttempts: number;
+  mobileOtpVerified: boolean;
+  mobileOtpAttempts: number;
+  turnstileToken?: string;
+  country?: string;
+  asn?: string;
+  createdAt: string;
+}
+
+export interface SecuritySettings {
+  turnstileEnabled: boolean;
+  disposableEmailBlocked: boolean;
+  ipRateLimitPerHour: number;
+  deviceRateLimitPerHour: number;
+  autoBlockRiskThreshold: number;
+  requireManualReviewRiskThreshold: number;
 }
 
 

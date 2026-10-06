@@ -58,6 +58,8 @@ export type NavTab =
   | 'audit-logs'
   | 'developer-observability'
   | 'admin-push-infrastructure'
+  | 'signup-security'
+  | 'razorpay-payments'
   | 'settings';
 
 @Component({
@@ -134,6 +136,17 @@ export type NavTab =
               <span>Staff & Access</span>
               <span class="ml-auto bg-indigo-500/20 text-indigo-400 text-[9px] font-bold px-1.5 py-0.5 rounded border border-indigo-500/30">RBAC</span>
             </button>
+
+            <!-- Signup & Anti-Abuse Security -->
+            <button
+              type="button"
+              (click)="onSelectTab('signup-security')"
+              [ngClass]="getNavClass('signup-security')"
+              class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all">
+              <app-icon name="shield" [size]="15"></app-icon>
+              <span>Signup & Risk Engine</span>
+              <span class="ml-auto bg-emerald-500/20 text-emerald-400 text-[9px] font-bold px-1.5 py-0.5 rounded border border-emerald-500/30">NEW</span>
+            </button>
           </div>
         </div>
 
@@ -187,6 +200,16 @@ export type NavTab =
                 class="ml-auto bg-amber-500 text-slate-950 text-[10px] px-2 py-0.5 rounded-full font-extrabold shadow-sm">
                 {{ pendingTransfersCount() }}
               </span>
+            </button>
+
+            <!-- Razorpay Auto Captures -->
+            <button
+              type="button"
+              (click)="onSelectTab('razorpay-payments')"
+              [ngClass]="getNavClass('razorpay-payments')"
+              class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all">
+              <app-icon name="credit-card" [size]="15"></app-icon>
+              <span>Razorpay Captures</span>
             </button>
 
             <!-- Billing Dashboard -->
